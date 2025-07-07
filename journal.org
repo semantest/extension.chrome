@@ -1,0 +1,136 @@
+#+TITLE: Semantest Chrome Extension - Development Journal
+#+AUTHOR: Semantest Team
+#+DATE: [2024-01-07]
+
+* Overview
+
+This repository contains the Chrome browser extension for Semantest. It provides the bridge between the Semantest server and web pages, enabling semantic automation through secure content script injection and background service workers.
+
+* Repository History
+
+** Monorepo Separation (2024-01-07)
+
+This repository was extracted from the original chatgpt-buddy monorepo as part of Phase 8A of the Semantest platform evolution. The separation preserves the complete git history of the extension directory.
+
+*** Key Changes
+- Extracted from =extension/= directory in the monorepo
+- Now published as =@semantest/chrome-extension= on npm
+- Repository URL: https://github.com/semantest/extension.chrome
+- Part of the semantest organization
+- Works with =@semantest/nodejs-server=
+
+*** Post-Separation Setup Required
+1. Update package.json dependencies from workspace references to npm packages
+2. Set up GitHub Actions CI/CD workflow
+3. Configure Chrome Web Store publishing
+4. Update README with proper documentation
+
+** Development Evolution
+
+*** Manifest V2 Era
+- Basic content script injection
+- Simple WebSocket communication
+- Limited permissions model
+- Background page architecture
+
+*** Manifest V3 Migration
+- Service worker implementation
+- Enhanced security model
+- Dynamic content script injection
+- Improved performance
+
+*** Enterprise Features
+- Managed policy support
+- Secure communication protocols
+- Audit logging
+- Team synchronization
+
+* Technical Architecture
+
+** Extension Components
+
+*** Service Worker (Background)
+- WebSocket connection management
+- Message routing
+- State persistence
+- Extension lifecycle handling
+
+*** Content Scripts
+- DOM interaction layer
+- Semantic element selection
+- Event simulation
+- Page state monitoring
+
+*** Popup Interface
+- Connection status display
+- Quick actions
+- Settings access
+- Debug information
+
+*** Options Page
+- Server configuration
+- Authentication setup
+- Advanced settings
+- Import/export config
+
+** Security Features
+
+*** Communication Security
+- TLS WebSocket connections
+- Message encryption
+- Origin validation
+- Content Security Policy
+
+*** Permission Model
+- Minimal required permissions
+- Optional permission requests
+- Host permission management
+- User consent flow
+
+** Message Protocol
+
+#+BEGIN_SRC typescript
+// Extension -> Server
+{
+  type: "element.find",
+  selector: { semantic: "login button" },
+  context: { url: "https://example.com" }
+}
+
+// Server -> Extension
+{
+  type: "action.perform",
+  action: "click",
+  target: { elementId: "elem-123" }
+}
+#+END_SRC
+
+* Chrome Web Store Integration
+
+** Publishing Pipeline
+- Automated version bumping
+- Build optimization
+- Store metadata generation
+- Review process handling
+
+** User Features
+- Auto-update mechanism
+- Error reporting
+- Usage analytics (privacy-respecting)
+- Feature flags
+
+* Challenges Overcome
+
+- Manifest V3 service worker limitations
+- Cross-origin restrictions
+- Dynamic content handling
+- Memory management
+- Performance optimization
+
+* Future Roadmap
+
+- Firefox/Edge adaptation
+- Safari extension
+- Advanced debugging tools
+- Visual automation recorder
+- AI-powered element detection
