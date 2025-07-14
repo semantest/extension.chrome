@@ -3,6 +3,7 @@
 
 import { globalMessageStore, messageStoreActions } from './message-store.js';
 import { globalTimeTravelUI } from './time-travel-ui.js';
+import { isAllowedDomain, ALLOWED_DOMAINS, getDomainRestrictionMessage } from './domain-validator.js';
 
 let DEFAULT_SERVER_URL = 'ws://localhost:3003/ws';
 let ws: WebSocket | null = null;
@@ -286,6 +287,11 @@ class AutomationRequestedHandler extends MessageHandler {
         throw new Error('No active tab found');
       }
       
+      // Check if the tab URL is allowed by our extension
+      if (!isAllowedDomain(tab.url)) {
+        throw new Error(getDomainRestrictionMessage());
+      }
+      
       // Forward to content script
       chrome.tabs.sendMessage(tab.id, message, (response) => {
         if (chrome.runtime.lastError) {
@@ -418,6 +424,11 @@ class ContractExecutionRequestedHandler extends MessageHandler {
         throw new Error('No active tab found');
       }
       
+      // Check if the tab URL is allowed by our extension
+      if (!isAllowedDomain(tab.url)) {
+        throw new Error(getDomainRestrictionMessage());
+      }
+      
       // Forward to content script with contract execution type
       const contractMessage = {
         ...message,
@@ -459,6 +470,11 @@ class ContractDiscoveryRequestedHandler extends MessageHandler {
         throw new Error('No active tab found');
       }
       
+      // Check if the tab URL is allowed by our extension
+      if (!isAllowedDomain(tab.url)) {
+        throw new Error(getDomainRestrictionMessage());
+      }
+      
       // Forward to content script with contract discovery type
       const discoveryMessage = {
         ...message,
@@ -498,6 +514,11 @@ class ContractAvailabilityCheckHandler extends MessageHandler {
       
       if (!tab.id) {
         throw new Error('No active tab found');
+      }
+      
+      // Check if the tab URL is allowed by our extension
+      if (!isAllowedDomain(tab.url)) {
+        throw new Error(getDomainRestrictionMessage());
       }
       
       // Forward to content script with availability check type

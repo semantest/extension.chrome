@@ -125,6 +125,94 @@ npm run test:coverage
 - **[Plugin Development](docs/PLUGINS.md)** - Create custom extensions
 
 ## 🧪 Testing
+# @semantest/chrome-extension
+
+AI-powered web automation extension for ChatGPT and Google integration, part of the Semantest ecosystem.
+
+## 🔒 Security Update (v2.0.0)
+
+**Important**: This version removes the `<all_urls>` permission for enhanced security. The extension now only requests access to specific domains:
+- ChatGPT (chat.openai.com, chatgpt.com)
+- Google services (google.com and subdomains)
+
+See [PERMISSION_MIGRATION_GUIDE.md](./PERMISSION_MIGRATION_GUIDE.md) for details.
+
+## Features
+
+- 🤖 **ChatGPT Integration**: Automate conversations and interactions
+- 🔍 **Google Search Automation**: Enhanced search capabilities
+- 📥 **Smart Downloads**: Manage downloads from supported sites
+- 🧠 **Pattern Learning**: Learn from user interactions
+- 🔄 **Event-Driven Architecture**: Built on TypeScript-EDA framework
+- 🛡️ **Security First**: Restricted permissions, CSP enabled
+
+## Installation
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Build the extension: `npm run build`
+4. Load in Chrome:
+   - Open `chrome://extensions`
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select the `build` directory
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Build extension
+npm run build
+
+# Development mode with watch
+npm run dev
+
+# Run tests
+npm test
+
+# Type checking
+npm run typecheck
+
+# Linting
+npm run lint
+```
+
+## Supported Domains
+
+The extension only works on:
+- `https://chat.openai.com/*`
+- `https://chatgpt.com/*`
+- `https://*.google.com/*`
+- `https://google.com/*`
+
+## Architecture
+
+```
+extension.chrome/
+├── src/
+│   ├── background.ts          # Main background script
+│   ├── chatgpt-background.ts  # ChatGPT-specific features
+│   ├── content_script.ts      # DOM interaction
+│   ├── contracts/             # Semantic contracts
+│   ├── plugins/               # Plugin system
+│   └── __tests__/             # Test suite
+├── manifest.json              # Extension manifest
+└── build/                     # Compiled output
+```
+
+## Security
+
+- ✅ No `<all_urls>` permission
+- ✅ Content Security Policy enabled
+- ✅ Domain-restricted content scripts
+- ✅ Message validation
+- ✅ Secure storage practices
+
+## Testing
+
+The extension includes comprehensive tests for security features:
 
 ```bash
 # Run all tests
@@ -250,3 +338,32 @@ Special thanks to:
 **Made with ❤️ by the Semantest Team**
 
 [⬆️ Back to Top](#chatgpt-browser-extension)
+# Run security-specific tests
+npm test restricted-permissions
+```
+
+## Migration from Previous Versions
+
+If upgrading from a version with `<all_urls>` permission, please read the [Permission Migration Guide](./PERMISSION_MIGRATION_GUIDE.md).
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Ensure all tests pass
+5. Submit a pull request
+
+## License
+
+GPL-3.0 - See LICENSE file for details
+
+## Links
+
+- 📚 [Full Documentation](https://github.com/semantest/docs)
+- 🐛 [Report Issues](https://github.com/semantest/chrome-extension/issues)
+- 💬 [Community Forum](https://community.semantest.com)
+
+---
+
+Part of the [Semantest](https://semantest.com) ecosystem - Revolutionizing web automation through semantic contracts.
