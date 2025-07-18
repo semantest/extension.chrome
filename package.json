@@ -1,7 +1,7 @@
 {
-  "name": "@chatgpt-buddy/extension",
+  "name": "@semantest/extension",
   "version": "2.0.0",
-  "description": "Browser extension for ChatGPT-buddy - AI automation extension built on Web-Buddy framework",
+  "description": "Browser extension for Semantest - AI automation extension built on Semantest framework",
   "scripts": {
     "build": "tsc && npm run copy-assets",
     "copy-assets": "cp manifest.json build/ && cp -r assets build/ && cp src/*.html build/ 2>/dev/null || true",
@@ -15,16 +15,22 @@
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
-    "chatgpt",
+    "semantest",
     "ai-automation",
     "browser-extension",
-    "web-buddy",
     "training-system",
     "event-driven",
     "intelligent-automation"
   ],
-  "author": "rydnr",
+  "author": "Semantest Team <team@semantest.com>",
   "license": "GPL-3.0",
+  "homepage": "https://semantest.com/packages/extension",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/semantest/semantest.git",
+    "directory": "packages/extension"
+  },
+  "bugs": "https://github.com/semantest/semantest/issues",
   "dependencies": {
     "webextension-polyfill": "^0.10.0"
   },
@@ -44,10 +50,5 @@
     "host_permissions": [
       "<all_urls>"
     ]
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/rydnr/chatgpt-buddy.git",
-    "directory": "extension"
   }
 }
