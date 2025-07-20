@@ -1,0 +1,46 @@
+{
+  "name": "chatgpt-integration-tests",
+  "version": "1.0.0",
+  "description": "Integration tests for ChatGPT DOM manipulation",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:headless": "HEADLESS=true jest",
+    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
+    "test:slow": "SLOW_MO=250 jest",
+    "test:ci": "HEADLESS=true jest --ci --reporters=default --reporters=jest-junit",
+    "test:single": "jest --testNamePattern",
+    "test:verbose": "jest --verbose --detectOpenHandles",
+    "clean": "rm -rf screenshots test-profile coverage",
+    "clean:screenshots": "CLEAN_SCREENSHOTS=true jest --listTests > /dev/null",
+    "report": "open coverage/integration-report.html"
+  },
+  "dependencies": {
+    "puppeteer": "^21.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.0",
+    "@babel/preset-env": "^7.22.0",
+    "babel-jest": "^29.6.0",
+    "jest": "^29.6.0",
+    "jest-html-reporter": "^3.10.0",
+    "jest-junit": "^16.0.0",
+    "jest-puppeteer": "^9.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["<rootDir>/**/*.test.js"],
+    "testTimeout": 60000
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "integration-tests",
+    "puppeteer",
+    "chatgpt",
+    "chrome-extension",
+    "dom-testing"
+  ]
+}

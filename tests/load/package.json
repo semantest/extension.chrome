@@ -1,0 +1,36 @@
+{
+  "name": "websocket-load-tests",
+  "version": "1.0.0",
+  "description": "High-performance WebSocket load testing suite for 10K+ concurrent connections",
+  "main": "websocket-10k-connections.test.js",
+  "scripts": {
+    "test:10k": "node websocket-10k-connections.test.js",
+    "test:scenarios": "node websocket-load-scenarios.test.js",
+    "test:distributed": "node distributed-load-test.js coordinator",
+    "agent": "node distributed-load-test.js agent",
+    "test:all": "npm run test:scenarios && npm run test:10k",
+    "monitor": "node load-test-monitor.js",
+    "report": "node generate-load-report.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "express": "^4.18.2",
+    "axios": "^1.6.2",
+    "chalk": "^4.1.2",
+    "cli-progress": "^3.12.0",
+    "systeminformation": "^5.21.20"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "keywords": [
+    "websocket",
+    "load-testing",
+    "performance",
+    "stress-test",
+    "10k-connections"
+  ]
+}
