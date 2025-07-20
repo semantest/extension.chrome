@@ -19,6 +19,7 @@
 */
 
 import { Adapter, listen } from '@typescript-eda/core';
+import { Utils } from '@semantest/core';
 import { 
     GoogleImageDownloadRequested,
     FileDownloadRequested,
@@ -372,7 +373,7 @@ export class GoogleImagesContentAdapter extends Adapter {
             
             // Create download request event
             const downloadEvent = new GoogleImageDownloadRequested(
-                this.generateCorrelationId(),
+                Utils.generateCorrelationId(),
                 {
                     src: img.src,
                     alt: img.alt,
@@ -493,12 +494,7 @@ export class GoogleImagesContentAdapter extends Adapter {
         chrome.runtime.sendMessage(message);
     }
 
-    /**
-     * Generates unique correlation ID
-     */
-    private generateCorrelationId(): string {
-        return `google-images-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    }
+    // Correlation ID generation now handled by Utils.generateCorrelationId()
 
     /**
      * Cleanup method

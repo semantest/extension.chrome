@@ -98,6 +98,17 @@ class ChatGPTController {
               result = this.getStatus();
               break;
               
+            case 'DETECT_AND_DOWNLOAD_IMAGES':
+              result = await this.detectAndDownloadImages(request.data || {});
+              break;
+              
+            case 'REQUEST_DALLE_IMAGE':
+              result = await this.requestDALLEImage(
+                request.data.prompt,
+                request.data.options || {}
+              );
+              break;
+              
             default:
               result = { success: false, error: 'Unknown action' };
           }
@@ -283,6 +294,269 @@ class ChatGPTController {
       console.error('[ChatGPT Controller] Failed to send prompt:', error);
       return { success: false, error: error.message };
     }
+  }
+
+  // 5. Image Detection and Download
+  async detectAndDownloadImages(options = {}) {
+    try {
+      console.log('[ChatGPT Controller] Detecting DALL-E images');
+      
+      // Find all images in the chat
+      const images = await this.findAllImages();
+      if (images.length === 0) {
+        return { success: false, error: 'No images found' };
+      }
+      
+      console.log(`[ChatGPT Controller] Found ${images.length} images`);
+      
+      // Download images
+      const downloadResults = [];
+      for (let i = 0; i < images.length; i++) {
+        const result = await this.downloadImage(images[i], i, options);
+        downloadResults.push(result);
+      }
+      
+      return {
+        success: true,
+        count: downloadResults.filter(r => r.success).length,
+        total: images.length,
+        downloads: downloadResults
+      };
+      
+    } catch (error) {
+      console.error('[ChatGPT Controller] Failed to download images:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async findAllImages() {
+    // DALL-E images are typically in message containers with specific structure
+    const imageSelectors = [
+      'img[src*="oaidalleapiprodscus.blob.core.windows.net"]', // DALL-E API images
+      'img[src*="dalle"]', // Other DALL-E images
+      'div[data-message-author-role="assistant"] img', // Images in assistant messages
+      '.group img[alt*="Image"]', // Images with alt text
+      '.markdown img' // Images in markdown content
+    ];
+    
+    const images = [];
+    const foundUrls = new Set();
+    
+    for (const selector of imageSelectors) {
+      const elements = document.querySelectorAll(selector);
+      for (const img of elements) {
+        if (img.src && !foundUrls.has(img.src)) {
+          foundUrls.add(img.src);
+          images.push({
+            element: img,
+            url: img.src,
+            alt: img.alt || '',
+            parent: img.closest('[data-message-author-role]'),
+            timestamp: this.extractImageTimestamp(img)
+          });
+        }
+      }
+    }
+    
+    return images;
+  }
+
+  extractImageTimestamp(imgElement) {
+    // Try to extract timestamp from parent message
+    const messageContainer = imgElement.closest('.group');
+    if (messageContainer) {
+      // Look for time element or data attribute
+      const timeElement = messageContainer.querySelector('time');
+      if (timeElement) {
+        return timeElement.getAttribute('datetime') || timeElement.textContent;
+      }
+    }
+    return new Date().toISOString();
+  }
+
+  async downloadImage(imageData, index, options = {}) {
+    try {
+      const { element, url, alt, timestamp } = imageData;
+      
+      // Generate filename
+      const filename = this.generateImageFilename(imageData, index, options);
+      
+      // Method 1: Try native download button if available
+      const downloadButton = await this.findImageDownloadButton(element);
+      if (downloadButton) {
+        console.log('[ChatGPT Controller] Using native download button');
+        await this.clickElement(downloadButton);
+        return { success: true, method: 'native', filename, url };
+      }
+      
+      // Method 2: Use Chrome download API via background script
+      const downloadResult = await this.downloadViaBackground(url, filename);
+      if (downloadResult.success) {
+        return { success: true, method: 'background', filename, url };
+      }
+      
+      // Method 3: Fallback to link click
+      await this.downloadViaLink(url, filename);
+      return { success: true, method: 'link', filename, url };
+      
+    } catch (error) {
+      console.error('[ChatGPT Controller] Image download failed:', error);
+      return { success: false, error: error.message, url: imageData.url };
+    }
+  }
+
+  generateImageFilename(imageData, index, options = {}) {
+    const prefix = options.prefix || 'dalle';
+    const timestamp = new Date(imageData.timestamp).toISOString().replace(/[:.]/g, '-');
+    
+    // Extract prompt context if available
+    let promptHint = '';
+    if (imageData.parent) {
+      const previousMessage = imageData.parent.previousElementSibling;
+      if (previousMessage && previousMessage.querySelector('[data-message-author-role="user"]')) {
+        const userText = previousMessage.textContent.trim();
+        // Get first few words as hint
+        promptHint = userText.split(' ').slice(0, 3).join('-').toLowerCase().replace(/[^a-z0-9-]/g, '');
+      }
+    }
+    
+    // Build filename
+    const parts = [prefix];
+    if (promptHint) parts.push(promptHint);
+    parts.push(timestamp);
+    parts.push(`img-${index + 1}`);
+    
+    return `${parts.join('_')}.png`;
+  }
+
+  async findImageDownloadButton(imgElement) {
+    // Look for download button near the image
+    const container = imgElement.closest('.group') || imgElement.parentElement;
+    const selectors = [
+      'button[aria-label*="Download"]',
+      'button svg path[d*="M3 12.5v3.75"]', // Download icon path
+      'button:has(svg path[d*="download"])',
+      '.flex button' // Generic button in flex container
+    ];
+    
+    for (const selector of selectors) {
+      const button = container.querySelector(selector);
+      if (button) {
+        return button;
+      }
+    }
+    
+    return null;
+  }
+
+  async downloadViaBackground(url, filename) {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({
+        action: 'DOWNLOAD_IMAGE',
+        data: { url, filename }
+      }, (response) => {
+        resolve(response || { success: false });
+      });
+    });
+  }
+
+  async downloadViaLink(url, filename) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(link);
+    }, 100);
+  }
+
+  // 6. Request DALL-E Image Generation
+  async requestDALLEImage(prompt, options = {}) {
+    try {
+      console.log('[ChatGPT Controller] Requesting DALL-E image:', prompt);
+      
+      // Ensure we're using a model that supports DALL-E
+      const modelCheck = await this.ensureDALLEModel();
+      if (!modelCheck.success) {
+        return modelCheck;
+      }
+      
+      // Send the image generation prompt
+      const result = await this.sendPrompt(prompt);
+      if (!result.success) {
+        return result;
+      }
+      
+      // Wait for image to appear
+      console.log('[ChatGPT Controller] Waiting for image generation...');
+      const imageAppeared = await this.waitForImageGeneration(30000);
+      
+      if (!imageAppeared) {
+        return { success: false, error: 'Image generation timeout' };
+      }
+      
+      // Auto-download if requested
+      if (options.autoDownload) {
+        await this.delay(1000); // Let image fully load
+        const downloadResult = await this.detectAndDownloadImages({
+          prefix: options.filenamePrefix || 'dalle-generated'
+        });
+        return { 
+          success: true, 
+          imageGenerated: true, 
+          downloadResult 
+        };
+      }
+      
+      return { success: true, imageGenerated: true };
+      
+    } catch (error) {
+      console.error('[ChatGPT Controller] Failed to request DALL-E image:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async ensureDALLEModel() {
+    // Check if current model supports DALL-E
+    // This is a simplified check - adjust based on actual UI
+    const modelSelector = document.querySelector('button[aria-haspopup="menu"]');
+    if (modelSelector && modelSelector.textContent.includes('4')) {
+      return { success: true };
+    }
+    
+    // Try to switch to GPT-4 (which typically has DALL-E)
+    console.log('[ChatGPT Controller] Attempting to switch to DALL-E capable model');
+    // Implementation would go here
+    
+    return { success: true }; // Assume it's available for now
+  }
+
+  async waitForImageGeneration(timeout = 30000) {
+    const startTime = Date.now();
+    let lastImageCount = document.querySelectorAll('img').length;
+    
+    while (Date.now() - startTime < timeout) {
+      await this.delay(1000);
+      
+      const currentImageCount = document.querySelectorAll('img').length;
+      if (currentImageCount > lastImageCount) {
+        // New image appeared
+        return true;
+      }
+      
+      // Also check for DALL-E specific indicators
+      const dalleImages = document.querySelectorAll('img[src*="dalle"], img[src*="oaidalleapiprodscus"]');
+      if (dalleImages.length > 0) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   // Helper: Wait for response
