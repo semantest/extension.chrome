@@ -5,6 +5,18 @@ Enhance your ChatGPT experience with powerful project management, custom instruc
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/extension-id.svg)](https://chrome.google.com/webstore/detail/extension-id)
 [![Users](https://img.shields.io/chrome-web-store/users/extension-id.svg)](https://chrome.google.com/webstore/detail/extension-id)
 [![Rating](https://img.shields.io/chrome-web-store/rating/extension-id.svg)](https://chrome.google.com/webstore/detail/extension-id)
+[![Version](https://img.shields.io/badge/version-1.0.1-green.svg)](https://github.com/semantest/extension.chrome/releases)
+
+## 🔒 Privacy & Security
+
+This extension respects your privacy:
+- ✅ **No data collection** without explicit consent
+- ✅ **Anonymous telemetry** (opt-in only) for error reporting
+- ✅ **All data stored locally** using Chrome's secure storage
+- ✅ **No third-party tracking** or analytics
+- ✅ **Open source** - audit our code anytime
+
+[View our Privacy Policy](PRIVACY_POLICY.md)
 
 ## ✨ Key Features
 
