@@ -42,16 +42,18 @@ def create_extension_package():
         package_path.unlink()
         print(f"🧹 Removed existing {package_name}")
     
-    # Files to exclude
-    exclude_patterns = {
-        '.map', '.ts', '.test.js', '.spec.js', 
-        'test/', 'tests/', 'spec/', '.md', 'README',
-        'LICENSE', '.log', '.git', 'node_modules/',
-        '.env', '.config.js', 'jest.config', 'tsconfig',
-        '.eslint', '.prettier', 'coverage/', 'docs/',
-        'documentation/', '.DS_Store', 'Thumbs.db',
-        '.tmp', '.temp'
+    # Only include essential files
+    essential_files = {
+        'manifest.json',
+        'chatgpt-controller.js', 
+        'service-worker.js',
+        'popup.html'
     }
+    
+    def is_essential(file_path):
+        """Check if file is essential for extension"""
+        filename = Path(file_path).name
+        return filename in essential_files or 'assets/' in str(file_path)
     
     def should_exclude(file_path):
         """Check if file should be excluded"""
@@ -71,12 +73,15 @@ def create_extension_package():
                 for file in files:
                     file_path = Path(root) / file
                     
-                    # Skip excluded files
-                    if should_exclude(file_path):
-                        continue
-                    
                     # Calculate relative path from build directory
                     rel_path = file_path.relative_to(build_dir)
+                    
+                    # Only include essential files
+                    if not is_essential(file_path):
+                        print(f"  ❌ Excluded: {rel_path}")
+                        continue
+                    
+                    print(f"  📄 Found: {rel_path}")
                     
                     # Add to ZIP
                     zipf.write(file_path, rel_path)

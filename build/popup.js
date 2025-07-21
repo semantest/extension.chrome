@@ -1,4 +1,3 @@
-"use strict";
 // Web-Buddy Extension Popup Script
 // Provides UI for connection management and status monitoring
 class PopupController {

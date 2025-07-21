@@ -1,40 +1,33 @@
 {
   "manifest_version": 3,
   "name": "ChatGPT Extension",
-  "version": "2.0.0",
-  "description": "AI-powered web automation extension built on Semantest framework for ChatGPT and language model integration",
+  "version": "1.0.0",
+  "description": "Automate ChatGPT with projects, custom instructions, prompts, and image downloads",
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "service-worker.js"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["storage.js", "content_script.js"]
+      "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"],
+      "js": ["chatgpt-controller.js"]
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "ChatGPT Extension: AI Automation"
+    "default_title": "ChatGPT Extension"
   },
   "permissions": [
     "activeTab",
-    "scripting",
     "storage",
     "downloads"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://chat.openai.com/*",
+    "https://chatgpt.com/*"
   ],
   "icons": {
     "16": "assets/icon16.png",
-    "32": "assets/icon32.png", 
     "48": "assets/icon48.png",
     "128": "assets/icon128.png"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": ["assets/*"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  }
 }

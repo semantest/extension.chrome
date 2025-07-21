@@ -1,255 +1,203 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <style>
-    body {
-      width: 300px;
-      padding: 20px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      margin: 0;
-    }
-    
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    
-    .header h1 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 600;
-    }
-    
-    .header p {
-      margin: 5px 0 0 0;
-      font-size: 12px;
-      opacity: 0.8;
-    }
-    
-    .connection-panel {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 15px;
-      backdrop-filter: blur(10px);
-    }
-    
-    .connection-status {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 15px;
-    }
-    
-    .status-indicator {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .status-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      transition: all 0.3s ease;
-    }
-    
-    .status-dot.connected {
-      background: #4ade80;
-      box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
-    }
-    
-    .status-dot.disconnected {
-      background: #ef4444;
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-    }
-    
-    .status-dot.connecting {
-      background: #fbbf24;
-      box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
-      animation: pulse 1.5s infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-    
-    .status-text {
-      font-size: 14px;
-      font-weight: 500;
-    }
-    
-    .toggle-button {
-      background: rgba(255, 255, 255, 0.2);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 8px;
-      padding: 8px 16px;
-      color: white;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      outline: none;
-    }
-    
-    .toggle-button:hover {
-      background: rgba(255, 255, 255, 0.3);
-      border-color: rgba(255, 255, 255, 0.5);
-      transform: translateY(-1px);
-    }
-    
-    .toggle-button:active {
-      transform: translateY(0);
-    }
-    
-    .toggle-button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-    
-    .server-input {
-      width: 100%;
-      padding: 8px 12px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
-      font-size: 13px;
-      margin-bottom: 10px;
-      outline: none;
-      box-sizing: border-box;
-    }
-    
-    .server-input::placeholder {
-      color: rgba(255, 255, 255, 0.6);
-    }
-    
-    .server-input:focus {
-      border-color: rgba(255, 255, 255, 0.6);
-      background: rgba(255, 255, 255, 0.2);
-    }
-    
-    .info-panel {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-    
-    .info-panel .label {
-      font-weight: 600;
-      opacity: 0.9;
-    }
-    
-    .info-panel .value {
-      opacity: 0.7;
-      word-break: break-all;
-    }
-    
-    .log-panel {
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 8px;
-      padding: 10px;
-      margin-top: 15px;
-      max-height: 100px;
-      overflow-y: auto;
-      font-family: 'Monaco', 'Menlo', monospace;
-      font-size: 11px;
-      line-height: 1.3;
-    }
-    
-    .log-entry {
-      margin-bottom: 4px;
-      opacity: 0.8;
-    }
-    
-    .log-entry.error {
-      color: #fecaca;
-    }
-    
-    .log-entry.success {
-      color: #bbf7d0;
-    }
-    
-    .log-entry.info {
-      color: #bfdbfe;
-    }
-    
-    .storage-btn {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 4px;
-      padding: 4px 8px;
-      color: white;
-      font-size: 10px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      outline: none;
-      flex: 1;
-    }
-    
-    .storage-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
-      border-color: rgba(255, 255, 255, 0.4);
-    }
-    
-    .storage-btn:active {
-      transform: scale(0.95);
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semantest ChatGPT Extension</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="header">
-    <h1>🌐 Web-Buddy</h1>
-    <p>Browser Extension</p>
-  </div>
-  
-  <div class="connection-panel">
-    <div class="connection-status">
-      <div class="status-indicator">
-        <div id="statusDot" class="status-dot disconnected"></div>
-        <span id="statusText" class="status-text">Disconnected</span>
+  <div class="popup-container" data-theme="light">
+    <!-- Header with Theme Toggle -->
+    <header class="popup-header">
+      <div class="logo-section">
+        <svg class="logo" width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h1 class="app-title">Semantest</h1>
       </div>
-      <button id="toggleButton" class="toggle-button">Connect</button>
-    </div>
-    
-    <input 
-      id="serverInput" 
-      class="server-input" 
-      type="text" 
-      placeholder="ws://localhost:3003/ws"
-      value="ws://localhost:3003/ws"
-    />
-  </div>
-  
-  <div class="info-panel">
-    <div><span class="label">Extension ID:</span></div>
-    <div id="extensionId" class="value">Loading...</div>
-    
-    <div style="margin-top: 8px;"><span class="label">Current Tab:</span></div>
-    <div id="currentTab" class="value">Loading...</div>
-    
-    <div style="margin-top: 8px;"><span class="label">Last Message:</span></div>
-    <div id="lastMessage" class="value">None</div>
-  </div>
-  
-  <div id="logPanel" class="log-panel"></div>
+      
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <svg class="sun-icon" width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <circle cx="9" cy="9" r="3" stroke="currentColor" stroke-width="2"/>
+          <path d="M9 1v2M9 15v2M17 9h-2M3 9H1M14.66 3.34l-1.41 1.41M4.75 13.25l-1.41 1.41M14.66 14.66l-1.41-1.41M4.75 4.75L3.34 3.34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <svg class="moon-icon" width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M16 10.08A7.92 7.92 0 1 1 7.92 2A6.23 6.23 0 0 0 16 10.08z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </header>
 
-  <!-- Storage Management Panel -->
-  <div class="info-panel" style="margin-top: 15px;">
-    <div><span class="label">Storage Stats:</span></div>
-    <div id="storageStats" class="value">Loading...</div>
-    
-    <div style="margin-top: 8px; display: flex; gap: 8px;">
-      <button id="viewPatternsBtn" class="storage-btn">View Patterns</button>
-      <button id="clearOldDataBtn" class="storage-btn">Clear Old Data</button>
-    </div>
+    <!-- Project Section -->
+    <section class="project-section">
+      <div class="section-header">
+        <h2 class="section-title">Project</h2>
+        <button class="icon-button" id="newProjectBtn" aria-label="Create new project">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="project-selector">
+        <button class="project-dropdown" id="projectDropdown">
+          <div class="project-info">
+            <div class="project-indicator"></div>
+            <span class="project-name">Marketing Campaign</span>
+          </div>
+          <svg class="dropdown-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none">
+            <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        
+        <!-- Project Dropdown Menu (hidden by default) -->
+        <div class="project-menu hidden" id="projectMenu">
+          <div class="project-item active">
+            <div class="project-indicator indicator-primary"></div>
+            <span>Marketing Campaign</span>
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 7L6 10L11 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="project-item">
+            <div class="project-indicator indicator-info"></div>
+            <span>Product Development</span>
+          </div>
+          <div class="project-item">
+            <div class="project-indicator indicator-warning"></div>
+            <span>Customer Research</span>
+          </div>
+          <div class="project-item">
+            <div class="project-indicator indicator-purple"></div>
+            <span>Code Review</span>
+          </div>
+          <div class="menu-divider"></div>
+          <button class="project-item new-project">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Create New Project</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Custom Instructions Section -->
+    <section class="instructions-section">
+      <div class="section-header">
+        <h2 class="section-title">Custom Instructions</h2>
+        <button class="icon-button" id="saveInstructionsBtn" aria-label="Save instructions">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M12.667 3.333L6 10l-2.667-2.667" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="instructions-container">
+        <textarea 
+          class="instructions-textarea" 
+          id="instructionsTextarea"
+          placeholder="Add custom instructions for ChatGPT..."
+          rows="4"
+        >You are a helpful marketing assistant focused on creating engaging content that drives conversions.</textarea>
+        <div class="instructions-footer">
+          <span class="char-count" id="charCount">94 / 1500</span>
+          <button class="template-button" id="templateBtn" aria-label="Use template">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect x="2" y="2" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M5 5h4M5 7h4M5 9h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Prompt Section -->
+    <section class="prompt-section">
+      <div class="section-header">
+        <h2 class="section-title">Quick Prompt</h2>
+      </div>
+      
+      <div class="prompt-container">
+        <textarea 
+          class="prompt-textarea" 
+          id="promptTextarea"
+          placeholder="Type your prompt here..."
+          rows="3"
+        ></textarea>
+        <div class="prompt-actions">
+          <button class="action-button secondary" id="clearPromptBtn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Clear
+          </button>
+          <button class="action-button primary" id="sendPromptBtn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 8h12M12 8l-4-4M12 8l-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Send Prompt
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Action Buttons -->
+    <section class="actions-section">
+      <button class="action-button large primary" id="newChatBtn">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        New Chat
+      </button>
+      
+      <div class="secondary-actions">
+        <button class="action-button secondary" id="continueBtn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M14 8A6 6 0 1 1 2 8a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M14 8h-4l-2 2V6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Continue
+        </button>
+        <button class="action-button secondary" id="historyBtn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="3" y="3" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M6 6h4M6 8h4M6 10h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          History
+        </button>
+      </div>
+    </section>
+
+    <!-- Status Bar -->
+    <footer class="status-bar">
+      <div class="status-item">
+        <div class="status-dot active"></div>
+        <span class="status-text">Connected</span>
+      </div>
+      
+      <div class="status-divider"></div>
+      
+      <div class="status-item">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 2v5l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        <span class="status-text">15 chats today</span>
+      </div>
+      
+      <div class="status-divider"></div>
+      
+      <div class="status-item">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        <span class="status-text">v2.0.0</span>
+      </div>
+    </footer>
   </div>
 
   <script src="popup.js"></script>
