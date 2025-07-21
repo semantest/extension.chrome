@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semantest - Custom Instructions</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 1280px;
+      height: 800px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      overflow: hidden;
+    }
+    
+    .showcase-container {
+      display: flex;
+      align-items: center;
+      gap: 60px;
+    }
+    
+    .extension-popup {
+      width: 380px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+    }
+    
+    .popup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      background: #10a37f;
+      color: white;
+    }
+    
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .logo {
+      width: 28px;
+      height: 28px;
+    }
+    
+    .app-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    
+    .instructions-section {
+      padding: 20px;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    .save-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #10a37f;
+      transition: color 0.2s;
+    }
+    
+    .save-button:hover {
+      color: #0e9066;
+    }
+    
+    .instructions-container {
+      position: relative;
+    }
+    
+    .instructions-textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.5;
+      resize: vertical;
+      font-family: inherit;
+      color: #1f2937;
+      transition: border-color 0.2s;
+    }
+    
+    .instructions-textarea:focus {
+      outline: none;
+      border-color: #10a37f;
+    }
+    
+    .instructions-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    
+    .char-count {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    
+    .template-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #6b7280;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    
+    .template-button:hover {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    
+    .preview-section {
+      margin-top: 20px;
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .preview-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+    
+    .ai-preview {
+      display: flex;
+      gap: 12px;
+    }
+    
+    .ai-avatar {
+      width: 32px;
+      height: 32px;
+      background: #10a37f;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 16px;
+    }
+    
+    .ai-message {
+      font-size: 13px;
+      line-height: 1.4;
+      color: #374151;
+      font-style: italic;
+    }
+    
+    .feature-highlights {
+      max-width: 400px;
+      color: white;
+    }
+    
+    .highlight-title {
+      font-size: 42px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      line-height: 1.2;
+    }
+    
+    .highlight-subtitle {
+      font-size: 20px;
+      opacity: 0.9;
+      margin-bottom: 40px;
+      line-height: 1.5;
+    }
+    
+    .example-instructions {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    
+    .example-title {
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0.8;
+      margin-bottom: 12px;
+    }
+    
+    .example-list {
+      list-style: none;
+    }
+    
+    .example-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    
+    .example-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    
+    .template-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .template-card:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+    
+    .template-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .template-desc {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="showcase-container">
+    <!-- Extension Popup -->
+    <div class="extension-popup">
+      <header class="popup-header">
+        <div class="logo-section">
+          <svg class="logo" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2"/>
+            <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2"/>
+            <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2"/>
+          </svg>
+          <h1 class="app-title">Semantest</h1>
+        </div>
+      </header>
+      
+      <section class="instructions-section">
+        <div class="section-header">
+          <h2 class="section-title">Custom Instructions</h2>
+          <button class="save-button">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M12.667 3.333L6 10l-2.667-2.667" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="instructions-container">
+          <textarea class="instructions-textarea">You are a senior software engineer with expertise in React, TypeScript, and modern web development. Focus on:
+
+• Clean, maintainable code with proper type safety
+• Performance optimization and best practices
+• Clear explanations with practical examples
+• Security considerations in all implementations
+
+Provide code snippets with detailed comments when relevant.</textarea>
+          <div class="instructions-footer">
+            <span class="char-count">312 / 1500</span>
+            <button class="template-button">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <rect x="2" y="2" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M5 5h4M5 7h4M5 9h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              Templates
+            </button>
+          </div>
+        </div>
+        
+        <div class="preview-section">
+          <p class="preview-title">AI BEHAVIOR PREVIEW</p>
+          <div class="ai-preview">
+            <div class="ai-avatar">🤖</div>
+            <p class="ai-message">"I'll provide production-ready React/TypeScript code with comprehensive type definitions, performance considerations, and security best practices for your web development needs."</p>
+          </div>
+        </div>
+      </section>
+    </div>
+    
+    <!-- Feature Highlights -->
+    <div class="feature-highlights">
+      <h2 class="highlight-title">Personalize AI with Custom Instructions</h2>
+      <p class="highlight-subtitle">Shape ChatGPT's personality and expertise to match your specific needs</p>
+      
+      <div class="example-instructions">
+        <p class="example-title">INSTRUCTION IMPACT</p>
+        <ul class="example-list">
+          <li class="example-item">
+            <span class="example-icon">🎯</span>
+            <span>Define AI expertise and focus areas</span>
+          </li>
+          <li class="example-item">
+            <span class="example-icon">💬</span>
+            <span>Set communication style and tone</span>
+          </li>
+          <li class="example-item">
+            <span class="example-icon">📋</span>
+            <span>Specify output format preferences</span>
+          </li>
+          <li class="example-item">
+            <span class="example-icon">🚀</span>
+            <span>Include project-specific context</span>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="template-grid">
+        <div class="template-card">
+          <p class="template-name">Code Reviewer</p>
+          <p class="template-desc">Thorough code analysis</p>
+        </div>
+        <div class="template-card">
+          <p class="template-name">Marketing Expert</p>
+          <p class="template-desc">Conversion-focused copy</p>
+        </div>
+        <div class="template-card">
+          <p class="template-name">Research Assistant</p>
+          <p class="template-desc">Academic precision</p>
+        </div>
+        <div class="template-card">
+          <p class="template-name">Writing Coach</p>
+          <p class="template-desc">Creative storytelling</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

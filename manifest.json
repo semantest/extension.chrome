@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Semantest",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "AI-powered web automation extension built on Semantest framework for ChatGPT and language model integration",
   "background": {
     "service_worker": "build/semantest-background.js"
@@ -30,8 +30,12 @@
     "notifications"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://chat.openai.com/*",
+    "https://chatgpt.com/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; object-src 'none';"
+  },
   "icons": {
     "16": "assets/icon16.png",
     "32": "assets/icon32.png",

@@ -151,7 +151,6 @@ class ChatGPTController {
   // 1. Create New Project
   async createProject(projectName) {
     try {
-      this.reportFeatureUsage('create_project', true, { projectName: 'redacted' });
       
       // Look for new project button
       const newProjectBtn = await this.findElement(this.selectors.newProjectButton);
@@ -182,6 +181,9 @@ class ChatGPTController {
       await this.clickElement(createBtn);
       await this.delay(1000);
       
+      // Report success after operation completes
+      this.reportFeatureUsage('create_project', true, { projectName: 'redacted' });
+      
       return { success: true, projectName };
       
     } catch (error) {
@@ -194,6 +196,8 @@ class ChatGPTController {
   // 2. Set Custom Instructions
   async setCustomInstructions(aboutUser, aboutModel) {
     try {
+      // Track feature usage start
+      const startTime = Date.now();
       
       // Open profile menu
       const profileBtn = await this.findElement(this.selectors.profileButton);
@@ -249,6 +253,13 @@ class ChatGPTController {
       await this.clickElement(saveBtn);
       await this.delay(1000);
       
+      // Report success after operation completes
+      this.reportFeatureUsage('set_custom_instructions', true, {
+        duration: Date.now() - startTime,
+        hasAboutUser: !!aboutUser,
+        hasAboutModel: !!aboutModel
+      });
+      
       return { success: true };
       
     } catch (error) {
@@ -259,6 +270,7 @@ class ChatGPTController {
   // 3. Create New Chat
   async createNewChat() {
     try {
+      const startTime = Date.now();
       
       // Find new chat button
       const newChatBtn = await this.findElement(this.selectors.newChatButton);
@@ -272,6 +284,11 @@ class ChatGPTController {
       // Wait for chat input to be ready
       await this.waitForSelector(this.selectors.chatInput);
       
+      // Report success
+      this.reportFeatureUsage('create_new_chat', true, {
+        duration: Date.now() - startTime
+      });
+      
       return { success: true };
       
     } catch (error) {
@@ -282,6 +299,7 @@ class ChatGPTController {
   // 4. Send Prompt
   async sendPrompt(text) {
     try {
+      const startTime = Date.now();
       
       // Find chat input
       const chatInput = await this.waitForSelector(this.selectors.chatInput);
@@ -304,9 +322,17 @@ class ChatGPTController {
       // Wait for response to start
       await this.waitForResponse();
       
+      // Report success
+      this.reportFeatureUsage('send_prompt', true, {
+        duration: Date.now() - startTime,
+        promptLength: text.length
+      });
+      
       return { success: true, prompt: text };
       
     } catch (error) {
+      this.reportError(error, { feature: 'send_prompt' });
+      this.reportFeatureUsage('send_prompt', false, { error: error.message });
       return { success: false, error: error.message };
     }
   }
@@ -314,6 +340,7 @@ class ChatGPTController {
   // 5. Image Detection and Download
   async detectAndDownloadImages(options = {}) {
     try {
+      const startTime = Date.now();
       
       // Find all images in the chat
       const images = await this.findAllImages();
@@ -329,9 +356,18 @@ class ChatGPTController {
         downloadResults.push(result);
       }
       
+      const successCount = downloadResults.filter(r => r.success).length;
+      
+      // Report success
+      this.reportFeatureUsage('detect_download_images', true, {
+        duration: Date.now() - startTime,
+        imagesFound: images.length,
+        imagesDownloaded: successCount
+      });
+      
       return {
         success: true,
-        count: downloadResults.filter(r => r.success).length,
+        count: successCount,
         total: images.length,
         downloads: downloadResults
       };
@@ -491,6 +527,7 @@ class ChatGPTController {
   // 6. Request DALL-E Image Generation
   async requestDALLEImage(prompt, options = {}) {
     try {
+      const startTime = Date.now();
       
       // Ensure we're using a model that supports DALL-E
       const modelCheck = await this.ensureDALLEModel();
@@ -523,6 +560,12 @@ class ChatGPTController {
           downloadResult 
         };
       }
+      
+      // Report success
+      this.reportFeatureUsage('request_dalle_image', true, {
+        duration: Date.now() - startTime,
+        autoDownload: options.autoDownload || false
+      });
       
       return { success: true, imageGenerated: true };
       
