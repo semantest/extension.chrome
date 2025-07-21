@@ -1,0 +1,160 @@
+{
+  "chrome_web_store_submission": {
+    "basic_info": {
+      "name": "Semantest for ChatGPT",
+      "short_description": "Transform ChatGPT into a powerful workspace with folders, templates, and smart export. Boost productivity by 10x.",
+      "category": "Productivity",
+      "language": "English (United States)"
+    },
+    "detailed_description": {
+      "source_file": "detailed-description.md",
+      "character_count": 2847
+    },
+    "categorization": {
+      "primary_category": "Productivity",
+      "secondary_category": "Developer Tools",
+      "justification": "Enhances productivity through organization and automation features, with strong appeal to developers for coding workflows"
+    },
+    "keywords_tags": [
+      "ChatGPT",
+      "productivity",
+      "organization", 
+      "templates",
+      "export",
+      "folders",
+      "AI assistant",
+      "conversation manager",
+      "prompt templates",
+      "search",
+      "automation",
+      "project management",
+      "developer tools",
+      "documentation",
+      "workflow"
+    ],
+    "target_audience": {
+      "primary": "Professionals using ChatGPT for work",
+      "secondary": "Students, researchers, content creators",
+      "user_types": [
+        "Software developers",
+        "Content writers", 
+        "Business consultants",
+        "Students and researchers",
+        "Project managers"
+      ]
+    },
+    "contact_information": {
+      "support_email": "support@semantest.com",
+      "developer_email": "developer@semantest.com",
+      "privacy_email": "privacy@semantest.com",
+      "website_url": "https://semantest.com",
+      "support_url": "https://semantest.com/support",
+      "privacy_policy_url": "https://semantest.com/privacy"
+    },
+    "social_links": {
+      "twitter": "https://twitter.com/semantest",
+      "github": "https://github.com/semantest",
+      "discord": "https://discord.gg/semantest",
+      "blog": "https://semantest.com/blog"
+    },
+    "pricing": {
+      "model": "Free",
+      "details": "Completely free forever with no trials, limits, or premium features",
+      "future_plans": "May introduce optional Pro features for teams while keeping core features free"
+    },
+    "permissions": {
+      "host_permissions": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*"
+      ],
+      "api_permissions": [
+        "storage",
+        "activeTab",
+        "scripting"
+      ],
+      "justification": "Required to integrate with ChatGPT interface and provide organization features"
+    },
+    "privacy_practices": {
+      "data_collection": "None",
+      "data_storage": "Local browser storage only",
+      "external_transmission": "None - all processing happens locally",
+      "user_tracking": "None",
+      "analytics": "None"
+    },
+    "localization": {
+      "default_locale": "en",
+      "supported_locales": ["en"],
+      "future_locales": ["es", "fr", "de", "ja", "zh"]
+    },
+    "version_info": {
+      "initial_version": "1.0.0",
+      "minimum_chrome_version": "88",
+      "manifest_version": 3
+    },
+    "assets": {
+      "screenshots": {
+        "count": 5,
+        "dimensions": "1280x800",
+        "files": [
+          "screenshot1.png",
+          "screenshot2.png", 
+          "screenshot3.png",
+          "screenshot4.png",
+          "screenshot5.png"
+        ]
+      },
+      "promotional_tiles": {
+        "small": {
+          "file": "small-promo-tile.png",
+          "dimensions": "440x280"
+        },
+        "large": {
+          "file": "large-promo-tile.png", 
+          "dimensions": "920x680"
+        }
+      },
+      "icons": {
+        "16": "icon16.png",
+        "48": "icon48.png",
+        "128": "icon128.png"
+      }
+    },
+    "store_presence": {
+      "featured_placement": "Request featured placement in Productivity category",
+      "collection_suggestions": [
+        "Essential Productivity Tools",
+        "AI and Machine Learning",
+        "Developer Essentials",
+        "Remote Work Tools"
+      ]
+    },
+    "quality_assurance": {
+      "testing_completed": true,
+      "cross_browser_tested": ["Chrome", "Edge", "Brave"],
+      "performance_optimized": true,
+      "accessibility_compliant": true,
+      "security_reviewed": true
+    },
+    "launch_strategy": {
+      "soft_launch": false,
+      "full_public_launch": true,
+      "marketing_ready": true,
+      "press_kit_available": true
+    },
+    "compliance": {
+      "chrome_web_store_policies": "Fully compliant",
+      "content_policy": "Compliant - productivity tool",
+      "spam_policy": "Compliant - legitimate functionality",
+      "privacy_policy": "Complete and transparent",
+      "terms_of_service": "Available at semantest.com/terms"
+    },
+    "submission_checklist": {
+      "extension_tested": true,
+      "store_listing_complete": true,
+      "assets_prepared": true,
+      "privacy_policy_published": true,
+      "support_channels_ready": true,
+      "developer_account_verified": true
+    }
+  }
+}
