@@ -1,0 +1,110 @@
+<svg width="800" height="400" viewBox="0 0 800 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="400" fill="#f8fafb"/>
+  
+  <!-- Background Pattern -->
+  <defs>
+    <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="1.5" fill="#e5e7eb" opacity="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="400" fill="url(#dots)"/>
+  
+  <!-- Central Card -->
+  <rect x="100" y="80" width="600" height="240" rx="16" fill="white" filter="url(#shadow)"/>
+  
+  <!-- Shadow Definition -->
+  <defs>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+  
+  <!-- Beta Badge -->
+  <g transform="translate(650, 100)">
+    <rect x="0" y="0" width="80" height="32" rx="16" fill="#10a37f"/>
+    <text x="40" y="21" text-anchor="middle" fill="white" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600">BETA</text>
+  </g>
+  
+  <!-- Confetti Elements -->
+  <g opacity="0.8">
+    <!-- Green confetti -->
+    <rect x="150" y="60" width="12" height="4" rx="2" fill="#10a37f" transform="rotate(25 156 62)"/>
+    <rect x="220" y="100" width="10" height="4" rx="2" fill="#0d8f6f" transform="rotate(-30 225 102)"/>
+    <rect x="580" y="70" width="14" height="4" rx="2" fill="#0fa57a" transform="rotate(45 587 72)"/>
+    <rect x="640" y="120" width="8" height="4" rx="2" fill="#10a37f" transform="rotate(-20 644 122)"/>
+    
+    <!-- Colored confetti -->
+    <rect x="180" y="140" width="10" height="4" rx="2" fill="#3b82f6" transform="rotate(60 185 142)"/>
+    <rect x="600" y="150" width="12" height="4" rx="2" fill="#f59e0b" transform="rotate(-45 606 152)"/>
+    <rect x="170" y="300" width="14" height="4" rx="2" fill="#8b5cf6" transform="rotate(30 177 302)"/>
+    <rect x="620" y="320" width="10" height="4" rx="2" fill="#ef4444" transform="rotate(-60 625 322)"/>
+  </g>
+  
+  <!-- Stars -->
+  <g opacity="0.6">
+    <path d="M200 90 L202 96 L208 96 L203 100 L205 106 L200 102 L195 106 L197 100 L192 96 L198 96 Z" fill="#fbbf24"/>
+    <path d="M590 90 L592 96 L598 96 L593 100 L595 106 L590 102 L585 106 L587 100 L582 96 L588 96 Z" fill="#fbbf24"/>
+    <path d="M160 260 L162 266 L168 266 L163 270 L165 276 L160 272 L155 276 L157 270 L152 266 L158 266 Z" fill="#fbbf24"/>
+  </g>
+  
+  <!-- Heart Icon -->
+  <g transform="translate(400, 120)">
+    <circle cx="0" cy="0" r="40" fill="#fee2e2"/>
+    <path d="M-16 -8 C-16 -16 -8 -20 0 -12 C8 -20 16 -16 16 -8 C16 0 0 16 0 16 S-16 0 -16 -8Z" fill="#ef4444"/>
+  </g>
+  
+  <!-- Main Text -->
+  <text x="400" y="210" text-anchor="middle" fill="#111827" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="700">
+    Thank You, Beta Testers!
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="400" y="240" text-anchor="middle" fill="#6b7280" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="400">
+    Your feedback shapes the future of Semantest
+  </text>
+  
+  <!-- Contribution Stats -->
+  <g transform="translate(200, 270)">
+    <!-- Bug Reports -->
+    <g transform="translate(0, 0)">
+      <rect x="0" y="0" width="120" height="60" rx="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1"/>
+      <text x="60" y="25" text-anchor="middle" fill="#92400e" font-family="system-ui" font-size="20" font-weight="600">127</text>
+      <text x="60" y="45" text-anchor="middle" fill="#92400e" font-family="system-ui" font-size="12">Bug Reports</text>
+    </g>
+    
+    <!-- Feature Ideas -->
+    <g transform="translate(140, 0)">
+      <rect x="0" y="0" width="120" height="60" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+      <text x="60" y="25" text-anchor="middle" fill="#1e40af" font-family="system-ui" font-size="20" font-weight="600">89</text>
+      <text x="60" y="45" text-anchor="middle" fill="#1e40af" font-family="system-ui" font-size="12">Feature Ideas</text>
+    </g>
+    
+    <!-- UI Improvements -->
+    <g transform="translate(280, 0)">
+      <rect x="0" y="0" width="120" height="60" rx="8" fill="#d1fae5" stroke="#10a37f" stroke-width="1"/>
+      <text x="60" y="25" text-anchor="middle" fill="#064e3b" font-family="system-ui" font-size="20" font-weight="600">156</text>
+      <text x="60" y="45" text-anchor="middle" fill="#064e3b" font-family="system-ui" font-size="12">Improvements</text>
+    </g>
+  </g>
+  
+  <!-- Semantest Logo -->
+  <g transform="translate(50, 340)">
+    <circle cx="20" cy="20" r="18" fill="#10a37f"/>
+    <path d="M20 6 L32.66 13 L32.66 27 L20 34 L7.34 27 L7.34 13 Z" fill="white" opacity="0.95"/>
+    <path d="M14 14 Q20 14 20 17 Q20 20 17 20 Q20 20 20 23 Q20 26 26 26" 
+          stroke="#10a37f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <text x="50" y="26" fill="#6b7280" font-family="system-ui" font-size="16" font-weight="500">Semantest</text>
+  </g>
+  
+  <!-- Call to Action -->
+  <g transform="translate(600, 340)">
+    <rect x="0" y="0" width="150" height="40" rx="20" fill="#10a37f"/>
+    <text x="75" y="26" text-anchor="middle" fill="white" font-family="system-ui" font-size="14" font-weight="600">Join Our Community</text>
+  </g>
+  
+  <!-- Version Info -->
+  <text x="400" y="370" text-anchor="middle" fill="#9ca3af" font-family="system-ui" font-size="12">
+    v1.0.0-beta • Chrome Extension
+  </text>
+</svg>

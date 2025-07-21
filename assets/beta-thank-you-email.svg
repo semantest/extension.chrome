@@ -1,0 +1,131 @@
+<svg width="600" height="800" viewBox="0 0 600 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Email Container Background -->
+  <rect width="600" height="800" fill="#ffffff"/>
+  
+  <!-- Header Section -->
+  <rect x="0" y="0" width="600" height="200" fill="#10a37f"/>
+  
+  <!-- Header Pattern -->
+  <g opacity="0.1">
+    <circle cx="50" cy="50" r="30" fill="white"/>
+    <circle cx="550" cy="150" r="40" fill="white"/>
+    <circle cx="500" cy="50" r="25" fill="white"/>
+    <circle cx="100" cy="140" r="20" fill="white"/>
+  </g>
+  
+  <!-- Logo in Header -->
+  <g transform="translate(300, 50)">
+    <circle cx="0" cy="0" r="40" fill="white"/>
+    <circle cx="0" cy="0" r="36" fill="#10a37f"/>
+    <path d="M0 -24 L20.78 -12 L20.78 12 L0 24 L-20.78 12 L-20.78 -12 Z" fill="white" opacity="0.95"/>
+    <path d="M-12 -12 Q0 -12 0 -6 Q0 0 -6 0 Q0 0 0 6 Q0 12 12 12" 
+          stroke="#10a37f" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Header Text -->
+  <text x="300" y="140" text-anchor="middle" fill="white" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700">
+    A Heartfelt Thank You! 💚
+  </text>
+  
+  <!-- Beta Badge -->
+  <rect x="240" y="160" width="120" height="28" rx="14" fill="white" opacity="0.2"/>
+  <text x="300" y="179" text-anchor="middle" fill="white" font-family="system-ui" font-size="12" font-weight="600">BETA PROGRAM</text>
+  
+  <!-- Main Content Area -->
+  <g transform="translate(50, 240)">
+    <!-- Greeting -->
+    <text x="0" y="0" fill="#111827" font-family="system-ui" font-size="20" font-weight="600">
+      Dear Beta Tester,
+    </text>
+    
+    <!-- Message -->
+    <text x="0" y="40" fill="#4b5563" font-family="system-ui" font-size="16" line-height="1.6">
+      <tspan x="0" dy="0">Your contributions have been invaluable in shaping</tspan>
+      <tspan x="0" dy="25">Semantest into the powerful tool it is today.</tspan>
+    </text>
+    
+    <!-- Stats Section -->
+    <g transform="translate(0, 100)">
+      <rect x="-10" y="-10" width="520" height="140" rx="12" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+      
+      <text x="20" y="20" fill="#374151" font-family="system-ui" font-size="18" font-weight="600">
+        Your Impact in Numbers:
+      </text>
+      
+      <!-- Stat Cards -->
+      <g transform="translate(20, 40)">
+        <!-- Bugs -->
+        <g transform="translate(0, 0)">
+          <rect x="0" y="0" width="150" height="70" rx="8" fill="white" stroke="#fbbf24" stroke-width="1"/>
+          <text x="75" y="30" text-anchor="middle" fill="#92400e" font-size="24" font-weight="700">127</text>
+          <text x="75" y="50" text-anchor="middle" fill="#92400e" font-size="14">Bugs Squashed</text>
+        </g>
+        
+        <!-- Features -->
+        <g transform="translate(160, 0)">
+          <rect x="0" y="0" width="150" height="70" rx="8" fill="white" stroke="#3b82f6" stroke-width="1"/>
+          <text x="75" y="30" text-anchor="middle" fill="#1e40af" font-size="24" font-weight="700">89</text>
+          <text x="75" y="50" text-anchor="middle" fill="#1e40af" font-size="14">Features Added</text>
+        </g>
+        
+        <!-- Hours -->
+        <g transform="translate(320, 0)">
+          <rect x="0" y="0" width="150" height="70" rx="8" fill="white" stroke="#10a37f" stroke-width="1"/>
+          <text x="75" y="30" text-anchor="middle" fill="#064e3b" font-size="24" font-weight="700">2,847</text>
+          <text x="75" y="50" text-anchor="middle" fill="#064e3b" font-size="14">Testing Hours</text>
+        </g>
+      </g>
+    </g>
+    
+    <!-- Special Thanks -->
+    <g transform="translate(0, 270)">
+      <text x="0" y="0" fill="#374151" font-family="system-ui" font-size="18" font-weight="600">
+        Special Recognition:
+      </text>
+      
+      <!-- Top Contributors -->
+      <g transform="translate(0, 30)">
+        <rect x="0" y="0" width="500" height="50" rx="8" fill="#fef3c7"/>
+        <text x="20" y="20" fill="#92400e" font-size="14" font-weight="600">🏆 Top Bug Hunter</text>
+        <text x="20" y="38" fill="#92400e" font-size="12">Found 23 critical issues</text>
+        
+        <rect x="0" y="60" width="500" height="50" rx="8" fill="#dbeafe"/>
+        <text x="20" y="80" fill="#1e40af" font-size="14" font-weight="600">💡 Innovation Champion</text>
+        <text x="20" y="98" fill="#1e40af" font-size="12">Suggested the Quick Actions feature</text>
+        
+        <rect x="0" y="120" width="500" height="50" rx="8" fill="#d1fae5"/>
+        <text x="20" y="140" fill="#064e3b" font-size="14" font-weight="600">⚡ Performance Hero</text>
+        <text x="20" y="158" fill="#064e3b" font-size="12">Helped optimize load time by 68%</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- CTA Section -->
+  <g transform="translate(300, 680)">
+    <rect x="-100" y="-20" width="200" height="50" rx="25" fill="#10a37f"/>
+    <text x="0" y="5" text-anchor="middle" fill="white" font-family="system-ui" font-size="16" font-weight="600">
+      Join Our Community
+    </text>
+  </g>
+  
+  <!-- Footer -->
+  <g transform="translate(300, 750)">
+    <text x="0" y="0" text-anchor="middle" fill="#9ca3af" font-family="system-ui" font-size="12">
+      Semantest • ChatGPT Extension • v1.0.0
+    </text>
+    <text x="0" y="20" text-anchor="middle" fill="#9ca3af" font-family="system-ui" font-size="12">
+      Made with 💚 by the Semantest Team
+    </text>
+  </g>
+  
+  <!-- Decorative Elements -->
+  <g opacity="0.6">
+    <circle cx="50" cy="350" r="3" fill="#10a37f"/>
+    <circle cx="60" cy="360" r="3" fill="#10a37f"/>
+    <circle cx="70" cy="350" r="3" fill="#10a37f"/>
+    
+    <circle cx="530" cy="450" r="3" fill="#10a37f"/>
+    <circle cx="540" cy="460" r="3" fill="#10a37f"/>
+    <circle cx="550" cy="450" r="3" fill="#10a37f"/>
+  </g>
+</svg>
