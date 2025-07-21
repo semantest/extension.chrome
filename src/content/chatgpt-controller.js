@@ -6,6 +6,9 @@ class ChatGPTController {
     this.isInitialized = false;
     this.waitTimeout = 10000; // 10 seconds default timeout
     
+    // Initialize error telemetry
+    this.initTelemetry();
+    
     // Selectors for ChatGPT UI elements
     this.selectors = {
       // Project Management
@@ -37,6 +40,40 @@ class ChatGPTController {
     };
     
     this.init();
+  }
+
+  async initTelemetry() {
+    try {
+      // Load error reporter
+      if (!window.errorReporter) {
+        const script = document.createElement('script');
+        script.src = chrome.runtime.getURL('src/telemetry/error-reporter.js');
+        document.head.appendChild(script);
+        
+        // Wait for it to load
+        await new Promise(resolve => {
+          script.onload = resolve;
+          setTimeout(resolve, 1000); // fallback timeout
+        });
+      }
+      
+      // Set up feature usage tracking
+      this.reportFeatureUsage = (feature, success, metadata) => {
+        if (window.errorReporter) {
+          window.errorReporter.reportFeatureUsage(feature, success, metadata);
+        }
+      };
+      
+      // Set up error reporting
+      this.reportError = (error, context) => {
+        if (window.errorReporter) {
+          window.errorReporter.reportError(error, context);
+        }
+      };
+      
+    } catch (error) {
+      // Silent fail - don't break extension if telemetry fails
+    }
   }
 
   async init() {
@@ -114,6 +151,7 @@ class ChatGPTController {
   // 1. Create New Project
   async createProject(projectName) {
     try {
+      this.reportFeatureUsage('create_project', true, { projectName: 'redacted' });
       
       // Look for new project button
       const newProjectBtn = await this.findElement(this.selectors.newProjectButton);
@@ -147,6 +185,8 @@ class ChatGPTController {
       return { success: true, projectName };
       
     } catch (error) {
+      this.reportError(error, { feature: 'create_project', projectName: 'redacted' });
+      this.reportFeatureUsage('create_project', false, { error: error.message });
       return { success: false, error: error.message };
     }
   }

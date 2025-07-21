@@ -189,6 +189,14 @@ class BackgroundServiceWorker {
               response = await this.downloadImage(request.data.url, request.data.filename);
               break;
               
+            case 'SEND_TELEMETRY':
+              response = await this.sendTelemetryData(request.data);
+              break;
+              
+            case 'SHOW_TELEMETRY_CONSENT':
+              response = await this.showTelemetryConsent(request.data);
+              break;
+              
             default:
               response = { success: false, error: 'Unknown action' };
           }
@@ -518,6 +526,74 @@ class BackgroundServiceWorker {
         'ChatGPT Extension Error',
         error.message || 'An unexpected error occurred'
       );
+    }
+  }
+
+  // Telemetry Methods
+  async sendTelemetryData(payload) {
+    try {
+      // Check if telemetry is enabled
+      const settings = await chrome.storage.sync.get(['telemetryConsent']);
+      if (!settings.telemetryConsent) {
+        return { success: false, error: 'Telemetry disabled' };
+      }
+
+      const response = await fetch('https://api.semantest.com/v1/telemetry/errors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'ChatGPT-Extension/' + chrome.runtime.getManifest().version
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        return { success: true };
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      // Silent fail for telemetry
+      return { success: false, error: error.message };
+    }
+  }
+
+  async showTelemetryConsent(data) {
+    try {
+      // Create notification to request consent
+      const notificationId = await chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'assets/icon48.png',
+        title: data.title || 'ChatGPT Extension',
+        message: data.message || 'Help improve the extension by sending anonymous error reports?',
+        buttons: [
+          { title: 'No Thanks' },
+          { title: 'Allow' }
+        ]
+      });
+
+      return new Promise((resolve) => {
+        const handleClick = (clickedId, buttonIndex) => {
+          if (clickedId === notificationId) {
+            const consent = buttonIndex === 1; // Second button is "Allow"
+            chrome.storage.sync.set({ telemetryConsent: consent });
+            chrome.notifications.onButtonClicked.removeListener(handleClick);
+            chrome.notifications.clear(notificationId);
+            resolve({ success: true, consent });
+          }
+        };
+
+        chrome.notifications.onButtonClicked.addListener(handleClick);
+
+        // Timeout after 30 seconds
+        setTimeout(() => {
+          chrome.notifications.onButtonClicked.removeListener(handleClick);
+          chrome.notifications.clear(notificationId);
+          resolve({ success: true, consent: false });
+        }, 30000);
+      });
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   }
 }

@@ -8,8 +8,14 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["build/storage.js", "build/content_script.js"]
+      "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"],
+      "js": ["src/telemetry/error-reporter.js", "src/content/chatgpt-controller.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/telemetry/*.js"],
+      "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"]
     }
   ],
   "action": {
@@ -20,7 +26,8 @@
     "activeTab",
     "scripting",
     "storage",
-    "downloads"
+    "downloads",
+    "notifications"
   ],
   "host_permissions": [
     "<all_urls>"

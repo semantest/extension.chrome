@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semantest Feedback Widget</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    /* Feedback Widget Styles */
+    .feedback-widget {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10000;
+    }
+    
+    .feedback-trigger {
+      width: 60px;
+      height: 60px;
+      background: var(--semantest-primary);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(16, 163, 127, 0.3);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .feedback-trigger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 163, 127, 0.4);
+      background: var(--semantest-primary-hover);
+    }
+    
+    .feedback-trigger.pulse {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    
+    .feedback-panel {
+      position: absolute;
+      bottom: 80px;
+      right: 0;
+      width: 320px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      transform: translateY(20px) scale(0.9);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    
+    .feedback-panel.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: all;
+    }
+    
+    .feedback-header {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--light-border-color);
+    }
+    
+    .feedback-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--light-text-primary);
+      margin: 0 0 4px 0;
+    }
+    
+    .feedback-subtitle {
+      font-size: 13px;
+      color: var(--light-text-secondary);
+      margin: 0;
+    }
+    
+    .feedback-content {
+      padding: 20px;
+    }
+    
+    .quick-feedback {
+      margin-bottom: 20px;
+    }
+    
+    .quick-feedback-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--light-text-primary);
+      margin: 0 0 12px 0;
+    }
+    
+    .feedback-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    
+    .feedback-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 8px;
+      background: var(--light-bg-secondary);
+      border: 1px solid var(--light-border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      color: var(--light-text-primary);
+    }
+    
+    .feedback-option:hover {
+      background: var(--light-bg-hover);
+      border-color: var(--semantest-primary);
+      transform: translateY(-1px);
+    }
+    
+    .feedback-option:active {
+      transform: translateY(0);
+    }
+    
+    .feedback-emoji {
+      font-size: 20px;
+    }
+    
+    .feedback-label {
+      font-size: 11px;
+      font-weight: 500;
+      text-align: center;
+      line-height: 1.2;
+    }
+    
+    .detailed-feedback {
+      border-top: 1px solid var(--light-border-color);
+      padding-top: 16px;
+    }
+    
+    .feedback-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px;
+      border: 1px solid var(--light-border-color);
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+      background: var(--light-bg-secondary);
+      color: var(--light-text-primary);
+      margin-bottom: 12px;
+    }
+    
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--semantest-primary);
+      background: var(--light-bg-primary);
+    }
+    
+    .feedback-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .feedback-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .feedback-btn.primary {
+      background: var(--semantest-primary);
+      color: white;
+    }
+    
+    .feedback-btn.primary:hover {
+      background: var(--semantest-primary-hover);
+    }
+    
+    .feedback-btn.secondary {
+      background: transparent;
+      color: var(--light-text-secondary);
+      border: 1px solid var(--light-border-color);
+    }
+    
+    .feedback-btn.secondary:hover {
+      background: var(--light-bg-hover);
+      color: var(--light-text-primary);
+    }
+    
+    .feedback-success {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    
+    .success-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    
+    .success-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--light-text-primary);
+      margin: 0 0 8px 0;
+    }
+    
+    .success-message {
+      font-size: 13px;
+      color: var(--light-text-secondary);
+      margin: 0;
+    }
+    
+    /* Feature-specific feedback */
+    .feature-context {
+      background: var(--light-bg-secondary);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+    
+    .feature-context-title {
+      font-weight: 600;
+      color: var(--light-text-primary);
+      margin-bottom: 4px;
+    }
+    
+    .feature-context-desc {
+      color: var(--light-text-secondary);
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 480px) {
+      .feedback-panel {
+        width: 300px;
+        right: -10px;
+      }
+      
+      .feedback-widget {
+        bottom: 16px;
+        right: 16px;
+      }
+    }
+    
+    /* Dark theme support */
+    [data-theme="dark"] .feedback-panel {
+      background: var(--dark-bg-primary);
+      border: 1px solid var(--dark-border-color);
+    }
+  </style>
+</head>
+<body>
+  <!-- Feedback Widget -->
+  <div class="feedback-widget" id="feedbackWidget">
+    <!-- Trigger Button -->
+    <button class="feedback-trigger" id="feedbackTrigger" aria-label="Send feedback">
+      💬
+    </button>
+    
+    <!-- Feedback Panel -->
+    <div class="feedback-panel" id="feedbackPanel">
+      <!-- Default State -->
+      <div class="feedback-state" id="defaultState">
+        <div class="feedback-header">
+          <h3 class="feedback-title">Quick Feedback</h3>
+          <p class="feedback-subtitle">Help us improve Semantest</p>
+        </div>
+        
+        <div class="feedback-content">
+          <!-- Feature Context (dynamic) -->
+          <div class="feature-context" id="featureContext" style="display: none;">
+            <div class="feature-context-title" id="contextTitle">About Project Management</div>
+            <div class="feature-context-desc" id="contextDesc">How was your experience switching between projects?</div>
+          </div>
+          
+          <!-- Quick Options -->
+          <div class="quick-feedback">
+            <h4 class="quick-feedback-title">What would you like to share?</h4>
+            <div class="feedback-options">
+              <button class="feedback-option" data-type="bug">
+                <span class="feedback-emoji">🐛</span>
+                <span class="feedback-label">Bug Report</span>
+              </button>
+              <button class="feedback-option" data-type="feature">
+                <span class="feedback-emoji">💡</span>
+                <span class="feedback-label">Feature Idea</span>
+              </button>
+              <button class="feedback-option" data-type="love">
+                <span class="feedback-emoji">❤️</span>
+                <span class="feedback-label">Love It!</span>
+              </button>
+              <button class="feedback-option" data-type="improve">
+                <span class="feedback-emoji">🎯</span>
+                <span class="feedback-label">Suggestion</span>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Detailed Feedback -->
+          <div class="detailed-feedback">
+            <textarea 
+              class="feedback-textarea" 
+              id="feedbackText" 
+              placeholder="Tell us more... (optional)"
+              maxlength="500"
+            ></textarea>
+            
+            <div class="feedback-actions">
+              <button class="feedback-btn secondary" id="cancelBtn">Cancel</button>
+              <button class="feedback-btn primary" id="submitBtn">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Success State -->
+      <div class="feedback-state feedback-success" id="successState" style="display: none;">
+        <div class="success-icon">✨</div>
+        <h3 class="success-title">Thank You!</h3>
+        <p class="success-message">Your feedback helps make Semantest better</p>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    class FeedbackWidget {
+      constructor() {
+        this.isOpen = false;
+        this.selectedType = null;
+        this.currentFeature = null;
+        
+        this.init();
+        this.bindEvents();
+        this.detectContext();
+      }
+      
+      init() {
+        this.trigger = document.getElementById('feedbackTrigger');
+        this.panel = document.getElementById('feedbackPanel');
+        this.defaultState = document.getElementById('defaultState');
+        this.successState = document.getElementById('successState');
+        this.featureContext = document.getElementById('featureContext');
+        this.contextTitle = document.getElementById('contextTitle');
+        this.contextDesc = document.getElementById('contextDesc');
+        this.feedbackText = document.getElementById('feedbackText');
+        
+        // Start with pulse animation to draw attention
+        setTimeout(() => {
+          this.trigger.classList.add('pulse');
+        }, 3000);
+      }
+      
+      bindEvents() {
+        // Toggle panel
+        this.trigger.addEventListener('click', () => this.toggle());
+        
+        // Quick feedback options
+        document.querySelectorAll('.feedback-option').forEach(option => {
+          option.addEventListener('click', (e) => {
+            this.selectedType = e.currentTarget.dataset.type;
+            this.updatePlaceholder();
+          });
+        });
+        
+        // Submit feedback
+        document.getElementById('submitBtn').addEventListener('click', () => this.submit());
+        
+        // Cancel
+        document.getElementById('cancelBtn').addEventListener('click', () => this.close());
+        
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+          if (!this.panel.contains(e.target) && !this.trigger.contains(e.target)) {
+            this.close();
+          }
+        });
+      }
+      
+      detectContext() {
+        // Detect which feature is currently active
+        const activeProject = document.querySelector('.project-dropdown .project-name');
+        const activeInstructions = document.querySelector('.instructions-textarea:focus');
+        const activePrompt = document.querySelector('.prompt-textarea:focus');
+        
+        if (activeProject) {
+          this.setContext('Project Management', 'How was your experience organizing projects?');
+        } else if (activeInstructions) {
+          this.setContext('Custom Instructions', 'How are the custom instructions working for you?');
+        } else if (activePrompt) {
+          this.setContext('Quick Prompts', 'How do you find the quick prompt feature?');
+        }
+      }
+      
+      setContext(title, description) {
+        this.currentFeature = title;
+        this.contextTitle.textContent = `About ${title}`;
+        this.contextDesc.textContent = description;
+        this.featureContext.style.display = 'block';
+      }
+      
+      updatePlaceholder() {
+        const placeholders = {
+          bug: 'Describe what went wrong...',
+          feature: 'What feature would you like to see?',
+          love: 'What do you love about this feature?',
+          improve: 'How can we make this better?'
+        };
+        
+        this.feedbackText.placeholder = placeholders[this.selectedType] || 'Tell us more...';
+      }
+      
+      toggle() {
+        if (this.isOpen) {
+          this.close();
+        } else {
+          this.open();
+        }
+      }
+      
+      open() {
+        this.isOpen = true;
+        this.panel.classList.add('visible');
+        this.trigger.classList.remove('pulse');
+        
+        // Track opening
+        this.track('feedback_widget_opened', {
+          feature: this.currentFeature,
+          timestamp: Date.now()
+        });
+      }
+      
+      close() {
+        this.isOpen = false;
+        this.panel.classList.remove('visible');
+        this.reset();
+      }
+      
+      submit() {
+        const feedback = {
+          type: this.selectedType,
+          message: this.feedbackText.value.trim(),
+          feature: this.currentFeature,
+          url: window.location.href,
+          timestamp: Date.now(),
+          userAgent: navigator.userAgent,
+          extensionVersion: chrome.runtime.getManifest().version
+        };
+        
+        // Send to background script
+        chrome.runtime.sendMessage({
+          action: 'submitFeedback',
+          data: feedback
+        });
+        
+        // Show success
+        this.showSuccess();
+        
+        // Track submission
+        this.track('feedback_submitted', feedback);
+      }
+      
+      showSuccess() {
+        this.defaultState.style.display = 'none';
+        this.successState.style.display = 'block';
+        
+        // Auto-close after 3 seconds
+        setTimeout(() => {
+          this.close();
+        }, 3000);
+      }
+      
+      reset() {
+        this.selectedType = null;
+        this.feedbackText.value = '';
+        this.feedbackText.placeholder = 'Tell us more... (optional)';
+        this.defaultState.style.display = 'block';
+        this.successState.style.display = 'none';
+        
+        // Remove selection styling
+        document.querySelectorAll('.feedback-option').forEach(option => {
+          option.classList.remove('selected');
+        });
+      }
+      
+      track(event, data) {
+        // Analytics tracking
+        if (typeof gtag !== 'undefined') {
+          gtag('event', event, data);
+        }
+        
+        // Chrome extension analytics
+        chrome.runtime.sendMessage({
+          action: 'trackEvent',
+          event: event,
+          data: data
+        });
+      }
+    }
+    
+    // Initialize widget when DOM loads
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => new FeedbackWidget());
+    } else {
+      new FeedbackWidget();
+    }
+  </script>
+</body>
+</html>
