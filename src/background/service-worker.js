@@ -38,8 +38,15 @@ class BackgroundServiceWorker {
     });
 
     // Extension startup
-    chrome.runtime.onStartup.addListener(() => {
+    chrome.runtime.onStartup.addListener(async () => {
       this.refreshChatGPTTabs();
+      
+      // SAFETY CHECK 4: Check if consent is still pending from previous session
+      const stored = await chrome.storage.sync.get(['telemetryConsent', 'telemetryConsentPending']);
+      if (stored.telemetryConsentPending && stored.telemetryConsent === undefined) {
+        // Restart consent check process
+        this.ensureConsentShown();
+      }
     });
   }
 
@@ -53,36 +60,59 @@ class BackgroundServiceWorker {
       autoCreateProjects: false
     });
 
+    // SAFETY CHECK 1: Mark that consent needs to be shown
+    await chrome.storage.sync.set({
+      telemetryConsentPending: true,
+      installTime: Date.now()
+    });
+
     // Open ChatGPT tab
     const tab = await chrome.tabs.create({
       url: 'https://chat.openai.com/',
       active: true
     });
 
-    // Wait for tab to load and trigger consent popup
-    setTimeout(async () => {
+    // SAFETY CHECK 2: Multiple trigger attempts with increasing delays
+    const showConsentWithRetries = async (attempts = 0) => {
+      // Check if consent already given (in case of race condition)
+      const stored = await chrome.storage.sync.get(['telemetryConsent', 'telemetryConsentPending']);
+      if (stored.telemetryConsent !== undefined || !stored.telemetryConsentPending) {
+        return; // Already handled
+      }
+
       try {
         // First try Chrome notification
         await this.showTelemetryConsent({
           title: 'Welcome to ChatGPT Extension!',
           message: 'Help us improve by allowing anonymous error reports? You can change this anytime in settings.'
         });
+        
+        // Mark as shown
+        await chrome.storage.sync.set({ telemetryConsentPending: false });
       } catch (error) {
         // Fallback: Send message to content script
         try {
           await chrome.tabs.sendMessage(tab.id, {
             action: 'SHOW_TELEMETRY_CONSENT_MODAL'
           });
+          
+          // Mark as shown
+          await chrome.storage.sync.set({ telemetryConsentPending: false });
         } catch (e) {
-          // If content script not ready, try again after delay
-          setTimeout(async () => {
-            await chrome.tabs.sendMessage(tab.id, {
-              action: 'SHOW_TELEMETRY_CONSENT_MODAL'
-            });
-          }, 2000);
+          // Retry with exponential backoff (max 5 attempts)
+          if (attempts < 5) {
+            const delay = Math.min(2000 * Math.pow(2, attempts), 10000);
+            setTimeout(() => showConsentWithRetries(attempts + 1), delay);
+          }
         }
       }
-    }, 3000); // Show after 3 seconds
+    };
+
+    // Initial attempt after 3 seconds
+    setTimeout(() => showConsentWithRetries(0), 3000);
+
+    // SAFETY CHECK 3: Background timer to ensure consent is shown
+    this.ensureConsentShown();
   }
 
   async handleUpdate(previousVersion) {
@@ -642,6 +672,54 @@ class BackgroundServiceWorker {
     } catch (error) {
       // Silent fail for fallback
     }
+  }
+
+  // SAFETY CHECK: Ensure consent popup is shown
+  async ensureConsentShown() {
+    // Check every 30 seconds if consent is still pending
+    const checkInterval = setInterval(async () => {
+      const stored = await chrome.storage.sync.get(['telemetryConsent', 'telemetryConsentPending']);
+      
+      // If consent is pending and no decision made
+      if (stored.telemetryConsentPending && stored.telemetryConsent === undefined) {
+        // Try to show consent again
+        try {
+          await this.showTelemetryConsent({
+            title: 'ChatGPT Extension - Privacy Choice',
+            message: 'Would you like to help improve the extension with anonymous error reports?'
+          });
+          
+          // Mark as shown
+          await chrome.storage.sync.set({ telemetryConsentPending: false });
+          clearInterval(checkInterval);
+        } catch (error) {
+          // Try content script fallback
+          const tabs = await chrome.tabs.query({
+            url: ['*://chat.openai.com/*', '*://chatgpt.com/*']
+          });
+          
+          if (tabs.length > 0) {
+            try {
+              await chrome.tabs.sendMessage(tabs[0].id, {
+                action: 'SHOW_TELEMETRY_CONSENT_MODAL'
+              });
+              await chrome.storage.sync.set({ telemetryConsentPending: false });
+              clearInterval(checkInterval);
+            } catch (e) {
+              // Will retry in next interval
+            }
+          }
+        }
+      } else {
+        // Consent already handled
+        clearInterval(checkInterval);
+      }
+    }, 30000); // Check every 30 seconds
+
+    // Stop checking after 5 minutes
+    setTimeout(() => {
+      clearInterval(checkInterval);
+    }, 300000);
   }
 }
 
