@@ -27,6 +27,8 @@ body {
   display: flex;
   flex-direction: column;
   transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
 /* Header */
@@ -160,7 +162,24 @@ section {
   width: 12px;
   height: 12px;
   border-radius: 50%;
+  background: var(--semantest-primary);
   flex-shrink: 0;
+}
+
+.project-indicator.indicator-primary {
+  background: var(--semantest-primary);
+}
+
+.project-indicator.indicator-info {
+  background: var(--semantest-info);
+}
+
+.project-indicator.indicator-warning {
+  background: var(--semantest-warning);
+}
+
+.project-indicator.indicator-purple {
+  background: #8b5cf6; /* Purple not in brand palette - consider adding to brand-colors.css */
 }
 
 .project-name {

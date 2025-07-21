@@ -1,20 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "Semantest",
+  "name": "ChatGPT Extension",
   "version": "2.0.0",
   "description": "AI-powered web automation extension built on Semantest framework for ChatGPT and language model integration",
   "background": {
-    "service_worker": "build/semantest-background.js"
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["build/storage.js", "build/content_script.js"]
+      "js": ["storage.js", "content_script.js"]
     }
   ],
   "action": {
-    "default_popup": "src/popup.html",
-    "default_title": "Semantest: AI Automation"
+    "default_popup": "popup.html",
+    "default_title": "ChatGPT Extension: AI Automation"
   },
   "permissions": [
     "activeTab",
@@ -27,8 +27,14 @@
   ],
   "icons": {
     "16": "assets/icon16.png",
-    "32": "assets/icon32.png",
+    "32": "assets/icon32.png", 
     "48": "assets/icon48.png",
     "128": "assets/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

@@ -16,9 +16,9 @@ class ChatGPTController {
       projectsList: '[role="navigation"] [role="list"]',
       
       // Chat Interface
-      newChatButton: 'a[href="/"], button[aria-label="New chat"], nav button:first-child',
-      chatInput: 'textarea[placeholder*="Message"], textarea[data-id="root"], #prompt-textarea',
-      sendButton: 'button[data-testid="send-button"], button[aria-label="Send message"], form button:last-child:not(:disabled)',
+      newChatButton: 'a[href="/"], button[aria-label="New chat"], nav button:first-child, button:has-text("New chat")',
+      chatInput: 'textarea[placeholder*="Message"], textarea[data-id="root"], #prompt-textarea, div[contenteditable="true"][data-id="root"]',
+      sendButton: 'button[data-testid="send-button"], button[aria-label="Send message"], form button:last-child:not(:disabled), button[aria-label*="Send"], button:has([data-testid="send-button"])',
       
       // Settings & Custom Instructions
       profileButton: 'button[aria-label*="Profile"], button:has(img[alt*="User"])',
@@ -334,9 +334,12 @@ class ChatGPTController {
     const imageSelectors = [
       'img[src*="oaidalleapiprodscus.blob.core.windows.net"]', // DALL-E API images
       'img[src*="dalle"]', // Other DALL-E images
+      'img[src*="openai"]', // OpenAI hosted images
       'div[data-message-author-role="assistant"] img', // Images in assistant messages
       '.group img[alt*="Image"]', // Images with alt text
-      '.markdown img' // Images in markdown content
+      '.markdown img', // Images in markdown content
+      'img[alt*="Generated"]', // Generated images
+      'img[src*="blob:"]' // Blob URLs from ChatGPT
     ];
     
     const images = [];
@@ -658,9 +661,16 @@ class ChatGPTController {
     
     // Clear existing value
     element.value = '';
+    element.textContent = '';
+    
+    // For textarea, also clear innerHTML
+    if (element.tagName === 'TEXTAREA') {
+      element.innerHTML = '';
+    }
     
     // Set new value
     element.value = value;
+    element.textContent = value;
     
     // Dispatch input events for React
     const inputEvent = new Event('input', { bubbles: true, cancelable: true });
@@ -669,14 +679,22 @@ class ChatGPTController {
     const changeEvent = new Event('change', { bubbles: true, cancelable: true });
     element.dispatchEvent(changeEvent);
     
-    // For some inputs, we might need to dispatch a keyboard event
-    const keyboardEvent = new KeyboardEvent('keydown', {
-      bubbles: true,
-      cancelable: true,
-      key: 'Enter',
-      code: 'Enter'
-    });
-    element.dispatchEvent(keyboardEvent);
+    // Trigger React's synthetic events
+    if (element._valueTracker) {
+      element._valueTracker.setValue('');
+    }
+    
+    // Force React to recognize the change
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype, 'value'
+    )?.set || Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype, 'value'
+    )?.set;
+    
+    if (nativeInputValueSetter) {
+      nativeInputValueSetter.call(element, value);
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   }
 
   delay(ms) {
