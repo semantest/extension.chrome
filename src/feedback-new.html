@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantest Feedback</title>
+    <link rel="stylesheet" href="feedback.css">
+</head>
+<body>
+    <div class="feedback-container" data-theme="light">
+        <!-- Header -->
+        <div class="feedback-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo">S</div>
+                    <h1>Feedback & Support</h1>
+                </div>
+                <button id="close-feedback" class="close-button" aria-label="Close">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <nav class="feedback-nav">
+                <button class="nav-tab active" data-tab="feedback">Feedback</button>
+                <button class="nav-tab" data-tab="issues">Report Issue</button>
+                <button class="nav-tab" data-tab="updates">Updates</button>
+                <button class="nav-tab" data-tab="metrics">Metrics</button>
+            </nav>
+        </div>
+
+        <!-- Feedback Form Tab -->
+        <div class="tab-content active" id="feedback-tab">
+            <div class="feedback-form">
+                <h2>Share Your Feedback</h2>
+                <p class="subtitle">Help us improve Semantest with your thoughts</p>
+                
+                <div class="rating-section">
+                    <label>How's your experience?</label>
+                    <div class="star-rating">
+                        <button class="star" data-rating="1">★</button>
+                        <button class="star" data-rating="2">★</button>
+                        <button class="star" data-rating="3">★</button>
+                        <button class="star" data-rating="4">★</button>
+                        <button class="star" data-rating="5">★</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="feedback-type">Feedback Type</label>
+                    <select id="feedback-type" class="form-control">
+                        <option value="">Select type...</option>
+                        <option value="feature">Feature Request</option>
+                        <option value="improvement">Improvement Suggestion</option>
+                        <option value="praise">Positive Feedback</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="feedback-message">Your Message</label>
+                    <textarea id="feedback-message" class="form-control" rows="4" 
+                        placeholder="Tell us what you think..."></textarea>
+                    <div class="char-count">0 / 500</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="feedback-email">Email (optional)</label>
+                    <input type="email" id="feedback-email" class="form-control" 
+                        placeholder="your@email.com">
+                    <small>Only if you'd like a response</small>
+                </div>
+
+                <button class="submit-button primary" id="submit-feedback">
+                    Send Feedback
+                </button>
+            </div>
+        </div>
+
+        <!-- Issue Reporting Tab -->
+        <div class="tab-content" id="issues-tab">
+            <div class="issue-form">
+                <h2>Report an Issue</h2>
+                <p class="subtitle">Found a bug? Let us know so we can fix it</p>
+
+                <div class="quick-issues">
+                    <h3>Common Issues</h3>
+                    <button class="quick-issue-btn" data-issue="popup-not-opening">
+                        Popup not opening
+                    </button>
+                    <button class="quick-issue-btn" data-issue="project-not-saving">
+                        Projects not saving
+                    </button>
+                    <button class="quick-issue-btn" data-issue="chatgpt-connection">
+                        Can't connect to ChatGPT
+                    </button>
+                    <button class="quick-issue-btn" data-issue="download-failed">
+                        Image download failed
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label for="issue-category">Issue Category</label>
+                    <select id="issue-category" class="form-control">
+                        <option value="">Select category...</option>
+                        <option value="popup">Extension Popup</option>
+                        <option value="projects">Project Management</option>
+                        <option value="instructions">Custom Instructions</option>
+                        <option value="downloads">Image Downloads</option>
+                        <option value="performance">Performance</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="issue-description">Describe the Issue</label>
+                    <textarea id="issue-description" class="form-control" rows="4" 
+                        placeholder="What happened? What did you expect?"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Steps to Reproduce</label>
+                    <div id="steps-container">
+                        <input type="text" class="form-control step-input" 
+                            placeholder="Step 1: Click on...">
+                    </div>
+                    <button class="add-step-btn">+ Add Step</button>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="include-diagnostics">
+                        <span>Include diagnostic data (helps us fix issues faster)</span>
+                    </label>
+                </div>
+
+                <button class="submit-button primary" id="submit-issue">
+                    Report Issue
+                </button>
+            </div>
+        </div>
+
+        <!-- Updates Tab -->
+        <div class="tab-content" id="updates-tab">
+            <div class="updates-section">
+                <h2>What's New</h2>
+                
+                <div class="update-notification" id="update-available" style="display: none;">
+                    <div class="update-icon">🎉</div>
+                    <div class="update-content">
+                        <h3>Update Available!</h3>
+                        <p>Version <span id="new-version">1.0.1</span> is ready to install</p>
+                        <button class="update-button">Update Now</button>
+                    </div>
+                </div>
+
+                <div class="changelog">
+                    <div class="version-entry">
+                        <div class="version-header">
+                            <h3>v1.0.0-beta</h3>
+                            <span class="version-date">Current Version</span>
+                        </div>
+                        <div class="version-tag beta">BETA</div>
+                        <ul class="changes-list">
+                            <li>✨ Initial release with 6 core features</li>
+                            <li>🔐 90/100 security score</li>
+                            <li>🎨 Project management system</li>
+                            <li>📝 Custom instructions per project</li>
+                            <li>🖼️ DALL-E image downloads</li>
+                            <li>🌙 Dark mode support</li>
+                        </ul>
+                    </div>
+
+                    <div class="version-entry">
+                        <h3>Coming Soon</h3>
+                        <ul class="changes-list upcoming">
+                            <li>📊 Advanced analytics</li>
+                            <li>🔄 Conversation templates</li>
+                            <li>⌨️ More keyboard shortcuts</li>
+                            <li>🌐 Multi-language support</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="update-settings">
+                    <h3>Update Preferences</h3>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="auto-update" checked>
+                        <span>Automatically install updates</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="update-notifications" checked>
+                        <span>Notify me about new features</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Tab -->
+        <div class="tab-content" id="metrics-tab">
+            <div class="metrics-dashboard">
+                <h2>Your Semantest Stats</h2>
+                <p class="subtitle">Track your productivity with ChatGPT</p>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">💬</div>
+                        <div class="metric-value" id="total-chats">0</div>
+                        <div class="metric-label">Total Chats</div>
+                        <div class="metric-trend up">+12% this week</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">📁</div>
+                        <div class="metric-value" id="active-projects">0</div>
+                        <div class="metric-label">Active Projects</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">🖼️</div>
+                        <div class="metric-value" id="images-saved">0</div>
+                        <div class="metric-label">Images Saved</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">⏱️</div>
+                        <div class="metric-value" id="time-saved">0h</div>
+                        <div class="metric-label">Time Saved</div>
+                        <div class="metric-trend">Est. 5min per chat</div>
+                    </div>
+                </div>
+
+                <div class="usage-chart">
+                    <h3>Daily Activity</h3>
+                    <div class="chart-container" id="activity-chart">
+                        <!-- Chart will be rendered here -->
+                        <div class="chart-placeholder">
+                            <div class="bar" style="height: 40%"></div>
+                            <div class="bar" style="height: 60%"></div>
+                            <div class="bar" style="height: 80%"></div>
+                            <div class="bar" style="height: 65%"></div>
+                            <div class="bar" style="height: 90%"></div>
+                            <div class="bar" style="height: 75%"></div>
+                            <div class="bar" style="height: 100%"></div>
+                        </div>
+                        <div class="chart-labels">
+                            <span>Mon</span>
+                            <span>Tue</span>
+                            <span>Wed</span>
+                            <span>Thu</span>
+                            <span>Fri</span>
+                            <span>Sat</span>
+                            <span>Sun</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="achievements">
+                    <h3>Achievements</h3>
+                    <div class="achievement-list">
+                        <div class="achievement unlocked">
+                            <div class="achievement-icon">🎯</div>
+                            <div class="achievement-info">
+                                <div class="achievement-name">First Chat</div>
+                                <div class="achievement-desc">Started your journey</div>
+                            </div>
+                        </div>
+                        <div class="achievement unlocked">
+                            <div class="achievement-icon">📚</div>
+                            <div class="achievement-info">
+                                <div class="achievement-name">Project Master</div>
+                                <div class="achievement-desc">Created 5 projects</div>
+                            </div>
+                        </div>
+                        <div class="achievement locked">
+                            <div class="achievement-icon">🔥</div>
+                            <div class="achievement-info">
+                                <div class="achievement-name">Power User</div>
+                                <div class="achievement-desc">100 chats completed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Message -->
+        <div class="success-message" id="success-message">
+            <div class="success-icon">✓</div>
+            <div class="success-text">Thank you! Your feedback has been sent.</div>
+        </div>
+    </div>
+
+    <script src="feedback.js"></script>
+</body>
+</html>

@@ -134,6 +134,10 @@ class ChatGPTController {
               );
               break;
               
+            case 'SHOW_TELEMETRY_CONSENT_MODAL':
+              result = await this.showTelemetryConsentModal();
+              break;
+              
             default:
               result = { success: false, error: 'Unknown action' };
           }
@@ -757,6 +761,35 @@ class ChatGPTController {
       url: window.location.href,
       chatInputPresent: !!document.querySelector(this.selectors.chatInput)
     };
+  }
+
+  // Show telemetry consent modal
+  async showTelemetryConsentModal() {
+    try {
+      // Load consent manager if not already loaded
+      if (!window.TelemetryConsentManager) {
+        const script = document.createElement('script');
+        script.src = chrome.runtime.getURL('src/telemetry/telemetry-consent.js');
+        document.head.appendChild(script);
+        
+        // Wait for it to load
+        await new Promise(resolve => {
+          script.onload = resolve;
+          setTimeout(resolve, 2000); // fallback timeout
+        });
+      }
+      
+      // Create consent manager instance
+      const consentManager = new window.TelemetryConsentManager();
+      
+      // Show dialog and wait for user decision
+      const consent = await consentManager.showConsentDialog();
+      
+      return { success: true, consent };
+    } catch (error) {
+      this.reportError(error, { feature: 'telemetry_consent_modal' });
+      return { success: false, error: error.message };
+    }
   }
 }
 

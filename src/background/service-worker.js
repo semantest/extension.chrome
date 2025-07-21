@@ -53,11 +53,36 @@ class BackgroundServiceWorker {
       autoCreateProjects: false
     });
 
-    // Open welcome page or ChatGPT
-    chrome.tabs.create({
+    // Open ChatGPT tab
+    const tab = await chrome.tabs.create({
       url: 'https://chat.openai.com/',
       active: true
     });
+
+    // Wait for tab to load and trigger consent popup
+    setTimeout(async () => {
+      try {
+        // First try Chrome notification
+        await this.showTelemetryConsent({
+          title: 'Welcome to ChatGPT Extension!',
+          message: 'Help us improve by allowing anonymous error reports? You can change this anytime in settings.'
+        });
+      } catch (error) {
+        // Fallback: Send message to content script
+        try {
+          await chrome.tabs.sendMessage(tab.id, {
+            action: 'SHOW_TELEMETRY_CONSENT_MODAL'
+          });
+        } catch (e) {
+          // If content script not ready, try again after delay
+          setTimeout(async () => {
+            await chrome.tabs.sendMessage(tab.id, {
+              action: 'SHOW_TELEMETRY_CONSENT_MODAL'
+            });
+          }, 2000);
+        }
+      }
+    }, 3000); // Show after 3 seconds
   }
 
   async handleUpdate(previousVersion) {
@@ -593,7 +618,29 @@ class BackgroundServiceWorker {
         }, 30000);
       });
     } catch (error) {
+      // Fallback: Try content script modal if notification fails
+      await this.showConsentInContentScript();
       return { success: false, error: error.message };
+    }
+  }
+
+  async showConsentInContentScript() {
+    try {
+      // Find an active ChatGPT tab
+      const activeTabs = await chrome.tabs.query({
+        url: ['*://chat.openai.com/*', '*://chatgpt.com/*'],
+        active: true
+      });
+
+      if (activeTabs.length > 0) {
+        // Send message to content script to show modal
+        const response = await chrome.tabs.sendMessage(activeTabs[0].id, {
+          action: 'SHOW_TELEMETRY_CONSENT_MODAL'
+        });
+        return response;
+      }
+    } catch (error) {
+      // Silent fail for fallback
     }
   }
 }
