@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semantest Extension Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-container" data-theme="light">
+    <!-- Header -->
+    <header class="options-header">
+      <div class="header-content">
+        <div class="logo-section">
+          <svg class="logo" width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="header-text">
+            <h1 class="app-title">Semantest Extension</h1>
+            <p class="app-subtitle">Settings & Preferences</p>
+          </div>
+        </div>
+        
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+          <svg class="sun-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+            <path d="M10 1v2M10 17v2M19 10h-2M5 10H1M16.24 3.76l-1.41 1.41M5.17 14.83l-1.41 1.41M16.24 16.24l-1.41-1.41M5.17 5.17L3.76 3.76" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <svg class="moon-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M17 11.08A8.8 8.8 0 1 1 8.92 2A6.93 6.93 0 0 0 17 11.08z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Sidebar -->
+    <nav class="settings-nav">
+      <div class="nav-section">
+        <h3 class="nav-title">Settings</h3>
+        <ul class="nav-list">
+          <li class="nav-item active" data-section="general">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="2" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M9 1v2M9 15v2M17 9h-2M3 9H1M14.5 3.5l-1.5 1.5M5 13l-1.5 1.5M14.5 14.5l-1.5-1.5M5 5L3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span>General</span>
+          </li>
+          <li class="nav-item" data-section="appearance">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 2a7 7 0 0 1 7 7c0 3.5-2 5-4 5H9a7 7 0 1 1 0-12z" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="6.5" cy="6.5" r="1" fill="currentColor"/>
+              <circle cx="11.5" cy="6.5" r="1" fill="currentColor"/>
+            </svg>
+            <span>Appearance</span>
+          </li>
+          <li class="nav-item" data-section="chatgpt">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M3 7h12l-1-4H4l-1 4zM3 7v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7M7 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>ChatGPT</span>
+          </li>
+          <li class="nav-item" data-section="automation">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="2" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M8 7l2 2-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Automation</span>
+          </li>
+          <li class="nav-item" data-section="privacy">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 1l6 3v5.5c0 3.5-6 6.5-6 6.5s-6-3-6-6.5V4l6-3z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M7 8l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Privacy & Data</span>
+          </li>
+          <li class="nav-item" data-section="advanced">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 1.5a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-3 0V3A1.5 1.5 0 0 1 9 1.5zM9 12a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-3 0v-3A1.5 1.5 0 0 1 9 12zM16.5 9a1.5 1.5 0 0 1-1.5 1.5h-3a1.5 1.5 0 0 1 0-3h3A1.5 1.5 0 0 1 16.5 9zM6 9a1.5 1.5 0 0 1-1.5 1.5H1.5a1.5 1.5 0 0 1 0-3H4.5A1.5 1.5 0 0 1 6 9z" fill="currentColor"/>
+            </svg>
+            <span>Advanced</span>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="nav-section">
+        <h3 class="nav-title">Support</h3>
+        <ul class="nav-list">
+          <li class="nav-item" data-section="help">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.5 7a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 2M9 13h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Help & Support</span>
+          </li>
+          <li class="nav-item" data-section="about">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M9 6v3M9 12h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>About</span>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="settings-main">
+      <!-- General Settings -->
+      <section class="settings-section active" id="general-section">
+        <div class="section-header">
+          <h2 class="section-title">General Settings</h2>
+          <p class="section-description">Configure basic extension behavior and preferences</p>
+        </div>
+
+        <div class="settings-group">
+          <h3 class="group-title">Extension Behavior</h3>
+          
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="autoActivate">Auto-activate on ChatGPT</label>
+              <p class="setting-description">Automatically activate extension when visiting ChatGPT</p>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="autoActivate" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="showNotifications">Show notifications</label>
+              <p class="setting-description">Display desktop notifications for important events</p>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="showNotifications" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="defaultProject">Default project</label>
+              <p class="setting-description">Project to select when opening the extension</p>
+            </div>
+            <div class="setting-control">
+              <select id="defaultProject" class="setting-select">
+                <option value="">None (show dropdown)</option>
+                <option value="marketing" selected>Marketing Campaign</option>
+                <option value="development">Product Development</option>
+                <option value="research">Customer Research</option>
+                <option value="review">Code Review</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="keystroke">Keyboard shortcut</label>
+              <p class="setting-description">Quick access shortcut to open extension popup</p>
+            </div>
+            <div class="setting-control">
+              <div class="keystroke-input">
+                <span class="keystroke-display">Ctrl+Shift+S</span>
+                <button class="keystroke-change" id="changeKeystroke">Change</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 class="group-title">Performance</h3>
+          
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="cacheSize">Cache size limit</label>
+              <p class="setting-description">Maximum storage space for cached data (MB)</p>
+            </div>
+            <div class="setting-control">
+              <input type="range" id="cacheSize" min="10" max="500" value="100" class="setting-slider">
+              <span class="slider-value">100 MB</span>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="enableAnalytics">Usage analytics</label>
+              <p class="setting-description">Help improve the extension by sharing anonymous usage data</p>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="enableAnalytics">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Appearance Settings -->
+      <section class="settings-section" id="appearance-section">
+        <div class="section-header">
+          <h2 class="section-title">Appearance</h2>
+          <p class="section-description">Customize the visual appearance and themes</p>
+        </div>
+
+        <div class="settings-group">
+          <h3 class="group-title">Theme</h3>
+          
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label">Color theme</label>
+              <p class="setting-description">Choose your preferred color scheme</p>
+            </div>
+            <div class="setting-control">
+              <div class="theme-options">
+                <label class="theme-option">
+                  <input type="radio" name="theme" value="light" checked>
+                  <div class="theme-preview light-theme">
+                    <div class="theme-header"></div>
+                    <div class="theme-content"></div>
+                  </div>
+                  <span class="theme-name">Light</span>
+                </label>
+                <label class="theme-option">
+                  <input type="radio" name="theme" value="dark">
+                  <div class="theme-preview dark-theme">
+                    <div class="theme-header"></div>
+                    <div class="theme-content"></div>
+                  </div>
+                  <span class="theme-name">Dark</span>
+                </label>
+                <label class="theme-option">
+                  <input type="radio" name="theme" value="auto">
+                  <div class="theme-preview auto-theme">
+                    <div class="theme-header"></div>
+                    <div class="theme-content"></div>
+                  </div>
+                  <span class="theme-name">Auto</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="fontSize">Font size</label>
+              <p class="setting-description">Adjust text size for better readability</p>
+            </div>
+            <div class="setting-control">
+              <select id="fontSize" class="setting-select">
+                <option value="small">Small</option>
+                <option value="medium" selected>Medium</option>
+                <option value="large">Large</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="compactMode">Compact interface</label>
+              <p class="setting-description">Use more compact spacing and smaller elements</p>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="compactMode">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 class="group-title">Interface</h3>
+          
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="showTooltips">Show tooltips</label>
+              <p class="setting-description">Display helpful tooltips on hover</p>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="showTooltips" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="animationSpeed">Animation speed</label>
+              <p class="setting-description">Control the speed of UI animations</p>
+            </div>
+            <div class="setting-control">
+              <select id="animationSpeed" class="setting-select">
+                <option value="fast">Fast</option>
+                <option value="normal" selected>Normal</option>
+                <option value="slow">Slow</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Privacy & Data Settings -->
+      <section class="settings-section" id="privacy-section">
+        <div class="section-header">
+          <h2 class="section-title">Privacy & Data</h2>
+          <p class="section-description">Manage your data, privacy, and security settings</p>
+        </div>
+
+        <div class="settings-group">
+          <h3 class="group-title">Data Management</h3>
+          
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label">Clear cached data</label>
+              <p class="setting-description">Remove all cached conversations and temporary files</p>
+            </div>
+            <div class="setting-control">
+              <button class="action-button secondary" id="clearCache">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 6h10l-1 7H4l-1-7zM5 3V2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M1 6h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Clear Cache
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label">Export data</label>
+              <p class="setting-description">Download all your projects and settings as JSON</p>
+            </div>
+            <div class="setting-control">
+              <button class="action-button secondary" id="exportData">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 10l4 4 4-4M8 14V2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Export Data
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-item warning">
+            <div class="setting-info">
+              <label class="setting-label">Reset all settings</label>
+              <p class="setting-description">This will permanently delete all your data and restore defaults</p>
+            </div>
+            <div class="setting-control">
+              <button class="action-button danger" id="resetSettings">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Reset Extension
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 class="group-title">Privacy</h3>
+          
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="storeHistory">Store conversation history</label>
+              <p class="setting-description">Save conversation history locally for quick access</p>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="storeHistory" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="autoDelete">Auto-delete old data</label>
+              <p class="setting-description">Automatically remove data older than 30 days</p>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="autoDelete">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <label class="setting-label" for="incognitoMode">Incognito mode</label>
+              <p class="setting-description">Don't store any data when this mode is enabled</p>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="incognitoMode">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- About Section -->
+      <section class="settings-section" id="about-section">
+        <div class="section-header">
+          <h2 class="section-title">About</h2>
+          <p class="section-description">Extension information and updates</p>
+        </div>
+
+        <div class="settings-group">
+          <div class="about-card">
+            <div class="about-logo">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="about-info">
+              <h3 class="about-title">Semantest Extension</h3>
+              <p class="about-version">Version 2.0.0</p>
+              <p class="about-description">AI-powered web automation extension for enhanced ChatGPT workflows and productivity.</p>
+            </div>
+          </div>
+
+          <div class="about-links">
+            <a href="#" class="about-link" id="viewChangelog">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="3" y="2" width="10" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M6 5h4M6 7h4M6 9h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              View Changelog
+            </a>
+            <a href="#" class="about-link" id="reportIssue">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M8 4v4M8 10h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Report Issue
+            </a>
+            <a href="#" class="about-link" id="documentation">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M4 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M6 6h4M6 8h4M6 10h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              Documentation
+            </a>
+          </div>
+
+          <div class="about-legal">
+            <p class="legal-text">© 2025 Semantest. Licensed under MIT License.</p>
+            <div class="legal-links">
+              <a href="#" class="legal-link">Privacy Policy</a>
+              <a href="#" class="legal-link">Terms of Service</a>
+              <a href="#" class="legal-link">Open Source</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Save Bar (appears when changes are made) -->
+    <div class="save-bar hidden" id="saveBar">
+      <div class="save-content">
+        <span class="save-message">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M6 8l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          You have unsaved changes
+        </span>
+        <div class="save-actions">
+          <button class="save-button secondary" id="discardChanges">Discard</button>
+          <button class="save-button primary" id="saveChanges">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

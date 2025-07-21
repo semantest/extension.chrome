@@ -117,6 +117,7 @@ global.WebSocket = jest.fn().mockImplementation((url) => ({
 }));
 
 // Mock DOM APIs that might not be available in jsdom
+global.window = global.window || {};
 if (!global.window.ResizeObserver) {
   global.window.ResizeObserver = jest.fn().mockImplementation(() => ({
     observe: jest.fn(),

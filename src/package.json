@@ -1,0 +1,67 @@
+{
+  "name": "extension-unit-tests",
+  "version": "1.0.0",
+  "description": "Unit tests for Chrome extension source code",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
+    "test:ci": "jest --ci --coverage --watchAll=false",
+    "test:update": "jest --updateSnapshot",
+    "test:verbose": "jest --verbose",
+    "test:storage": "jest storage.test.ts",
+    "test:popup": "jest popup.test.ts", 
+    "test:message-store": "jest message-store.test.ts",
+    "test:plugin-registry": "jest plugins/plugin-registry.test.ts",
+    "test:error-handling": "jest shared/patterns/error-handling.test.ts",
+    "coverage:open": "open coverage/lcov-report/index.html",
+    "coverage:serve": "npx http-server coverage/lcov-report -p 8080"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.0",
+    "@babel/preset-env": "^7.22.0",
+    "@babel/preset-typescript": "^7.22.0",
+    "@types/chrome": "^0.0.243",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.4.0",
+    "babel-jest": "^29.6.0",
+    "jest": "^29.6.0",
+    "jest-environment-jsdom": "^29.6.0",
+    "jest-junit": "^16.0.0",
+    "jest-watch-typeahead": "^2.2.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.1.0"
+  },
+  "jest": {
+    "projects": [
+      {
+        "displayName": "Extension Unit Tests",
+        "testMatch": ["<rootDir>/**/*.test.ts", "<rootDir>/**/*.test.js"],
+        "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"]
+      }
+    ]
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/semantest/ai-ml.git",
+    "directory": "extension.chrome/src"
+  },
+  "keywords": [
+    "chrome-extension",
+    "unit-tests",
+    "jest",
+    "typescript",
+    "testing"
+  ],
+  "author": "Semantest Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/semantest/ai-ml/issues"
+  },
+  "homepage": "https://github.com/semantest/ai-ml#readme"
+}

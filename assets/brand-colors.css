@@ -1,0 +1,238 @@
+/* Semantest Extension Brand Colors - Master Palette */
+
+:root {
+  /* === PRIMARY BRAND COLORS === */
+  --semantest-primary: #10a37f;
+  --semantest-primary-hover: #0d8f6f;
+  --semantest-primary-light: #0fa57a;
+  --semantest-primary-dark: #0a7d5f;
+  
+  /* === SEMANTIC COLOR VARIATIONS === */
+  --semantest-success: #10a37f;
+  --semantest-success-light: #81c995;
+  --semantest-success-dark: #0d8f6f;
+  
+  --semantest-info: #3b82f6;
+  --semantest-info-light: #8ab4f8;
+  --semantest-info-dark: #1557b0;
+  
+  --semantest-warning: #fbbc04;
+  --semantest-warning-light: #fdd663;
+  --semantest-warning-dark: #f59e0b;
+  
+  --semantest-danger: #ea4335;
+  --semantest-danger-light: #f28b82;
+  --semantest-danger-dark: #d73027;
+  
+  /* === NEUTRAL COLORS === */
+  --semantest-white: #ffffff;
+  --semantest-black: #000000;
+  --semantest-gray-50: #f8f9fa;
+  --semantest-gray-100: #f1f3f4;
+  --semantest-gray-200: #e8eaed;
+  --semantest-gray-300: #dadce0;
+  --semantest-gray-400: #bdc1c6;
+  --semantest-gray-500: #9aa0a6;
+  --semantest-gray-600: #80868b;
+  --semantest-gray-700: #5f6368;
+  --semantest-gray-800: #3c4043;
+  --semantest-gray-900: #202124;
+  
+  /* === LIGHT THEME === */
+  --light-bg-primary: var(--semantest-white);
+  --light-bg-secondary: var(--semantest-gray-50);
+  --light-bg-tertiary: var(--semantest-gray-100);
+  --light-bg-hover: var(--semantest-gray-200);
+  --light-bg-active: var(--semantest-gray-300);
+  
+  --light-text-primary: var(--semantest-gray-900);
+  --light-text-secondary: var(--semantest-gray-700);
+  --light-text-tertiary: var(--semantest-gray-600);
+  
+  --light-border-color: var(--semantest-gray-300);
+  --light-border-hover: var(--semantest-gray-400);
+  
+  /* === DARK THEME === */
+  --dark-bg-primary: #1f1f1f;
+  --dark-bg-secondary: #2d2d2d;
+  --dark-bg-tertiary: #383838;
+  --dark-bg-hover: #404040;
+  --dark-bg-active: #4a4a4a;
+  
+  --dark-text-primary: #e8eaed;
+  --dark-text-secondary: #bdc1c6;
+  --dark-text-tertiary: #9aa0a6;
+  
+  --dark-border-color: #3c4043;
+  --dark-border-hover: #5f6368;
+  
+  /* === CHATGPT ALIGNMENT === */
+  --chatgpt-green: var(--semantest-primary);
+  --chatgpt-green-hover: var(--semantest-primary-hover);
+  --chatgpt-background: var(--semantest-white);
+  --chatgpt-text: var(--semantest-gray-900);
+  
+  /* === SHADOWS === */
+  --shadow-sm: 0 1px 2px rgba(60, 64, 67, 0.1);
+  --shadow-md: 0 2px 8px rgba(60, 64, 67, 0.15);
+  --shadow-lg: 0 4px 12px rgba(60, 64, 67, 0.15);
+  --shadow-xl: 0 8px 24px rgba(60, 64, 67, 0.2);
+  
+  /* Dark theme shadows */
+  --shadow-dark-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-dark-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-dark-lg: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-dark-xl: 0 8px 24px rgba(0, 0, 0, 0.6);
+  
+  /* === OPACITY LEVELS === */
+  --opacity-hover: 0.8;
+  --opacity-disabled: 0.4;
+  --opacity-overlay: 0.9;
+  --opacity-backdrop: 0.5;
+  
+  /* === BORDER RADIUS === */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  
+  /* === SPACING === */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  
+  /* === COMPONENT-SPECIFIC COLORS === */
+  --button-primary-bg: var(--semantest-primary);
+  --button-primary-hover: var(--semantest-primary-hover);
+  --button-primary-text: var(--semantest-white);
+  
+  --button-secondary-bg: var(--light-bg-secondary);
+  --button-secondary-hover: var(--light-bg-hover);
+  --button-secondary-text: var(--light-text-primary);
+  --button-secondary-border: var(--light-border-color);
+  
+  --input-bg: var(--light-bg-secondary);
+  --input-border: var(--light-border-color);
+  --input-focus: var(--semantest-primary);
+  --input-text: var(--light-text-primary);
+  --input-placeholder: var(--light-text-tertiary);
+  
+  --toggle-bg: var(--light-border-color);
+  --toggle-checked: var(--semantest-primary);
+  --toggle-handle: var(--semantest-white);
+  
+  --card-bg: var(--light-bg-primary);
+  --card-border: var(--light-border-color);
+  --card-shadow: var(--shadow-md);
+  
+  --tooltip-bg: var(--semantest-gray-800);
+  --tooltip-text: var(--semantest-white);
+  --tooltip-shadow: var(--shadow-lg);
+}
+
+/* === DARK THEME OVERRIDES === */
+[data-theme="dark"] {
+  --light-bg-primary: var(--dark-bg-primary);
+  --light-bg-secondary: var(--dark-bg-secondary);
+  --light-bg-tertiary: var(--dark-bg-tertiary);
+  --light-bg-hover: var(--dark-bg-hover);
+  --light-bg-active: var(--dark-bg-active);
+  
+  --light-text-primary: var(--dark-text-primary);
+  --light-text-secondary: var(--dark-text-secondary);
+  --light-text-tertiary: var(--dark-text-tertiary);
+  
+  --light-border-color: var(--dark-border-color);
+  --light-border-hover: var(--dark-border-hover);
+  
+  --shadow-sm: var(--shadow-dark-sm);
+  --shadow-md: var(--shadow-dark-md);
+  --shadow-lg: var(--shadow-dark-lg);
+  --shadow-xl: var(--shadow-dark-xl);
+  
+  --button-secondary-bg: var(--dark-bg-secondary);
+  --button-secondary-hover: var(--dark-bg-hover);
+  --button-secondary-text: var(--dark-text-primary);
+  --button-secondary-border: var(--dark-border-color);
+  
+  --input-bg: var(--dark-bg-secondary);
+  --input-border: var(--dark-border-color);
+  --input-text: var(--dark-text-primary);
+  --input-placeholder: var(--dark-text-tertiary);
+  
+  --toggle-bg: var(--dark-border-color);
+  
+  --card-bg: var(--dark-bg-primary);
+  --card-border: var(--dark-border-color);
+  
+  --tooltip-bg: var(--semantest-gray-700);
+}
+
+/* === UTILITY CLASSES === */
+.semantest-primary { color: var(--semantest-primary); }
+.semantest-primary-bg { background-color: var(--semantest-primary); }
+
+.semantest-success { color: var(--semantest-success); }
+.semantest-success-bg { background-color: var(--semantest-success); }
+
+.semantest-info { color: var(--semantest-info); }
+.semantest-info-bg { background-color: var(--semantest-info); }
+
+.semantest-warning { color: var(--semantest-warning); }
+.semantest-warning-bg { background-color: var(--semantest-warning); }
+
+.semantest-danger { color: var(--semantest-danger); }
+.semantest-danger-bg { background-color: var(--semantest-danger); }
+
+/* === COMPONENT INTEGRATION === */
+.button-primary {
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border: none;
+}
+
+.button-primary:hover {
+  background-color: var(--button-primary-hover);
+}
+
+.button-secondary {
+  background-color: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  border: 1px solid var(--button-secondary-border);
+}
+
+.button-secondary:hover {
+  background-color: var(--button-secondary-hover);
+}
+
+.input-field {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--input-text);
+}
+
+.input-field:focus {
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
+}
+
+.input-field::placeholder {
+  color: var(--input-placeholder);
+}
+
+.card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+.tooltip {
+  background-color: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  box-shadow: var(--tooltip-shadow);
+}

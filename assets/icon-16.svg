@@ -1,0 +1,19 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="8" cy="8" r="7.5" fill="#10a37f" stroke="#0d8f6f" stroke-width="0.5"/>
+  
+  <!-- Semantest Logo Mark - Simplified for 16x16 -->
+  <g transform="translate(8, 8)">
+    <!-- Central hexagon shape -->
+    <path d="M0 -3.5 L3 -1.75 L3 1.75 L0 3.5 L-3 1.75 L-3 -1.75 Z" 
+          fill="#ffffff" 
+          opacity="0.95"/>
+    
+    <!-- Inner S letterform -->
+    <path d="M-1.5 -1.5 Q0 -1.5 0 -0.5 Q0 0 -0.5 0 Q0 0 0 0.5 Q0 1.5 1.5 1.5" 
+          stroke="#10a37f" 
+          stroke-width="0.8" 
+          fill="none"
+          stroke-linecap="round"/>
+  </g>
+</svg>

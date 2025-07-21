@@ -1,0 +1,208 @@
+<svg width="440" height="280" viewBox="0 0 440 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Definitions -->
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f2027;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#203a43;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2c5364;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Accent gradient -->
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10a37f;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d8f6f;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Feature card gradient -->
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.05" />
+    </linearGradient>
+    
+    <!-- Glow filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Text shadow -->
+    <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+      <feOffset dx="0" dy="2" result="offsetblur"/>
+      <feFlood flood-color="#000000" flood-opacity="0.3"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="440" height="280" fill="url(#bgGradient)"/>
+  
+  <!-- Background pattern -->
+  <g opacity="0.1">
+    <circle cx="50" cy="50" r="30" fill="#10a37f"/>
+    <circle cx="390" cy="80" r="25" fill="#10a37f"/>
+    <circle cx="380" cy="230" r="35" fill="#10a37f"/>
+    <circle cx="60" cy="220" r="20" fill="#10a37f"/>
+  </g>
+  
+  <!-- Main content area -->
+  <rect x="20" y="20" width="400" height="240" rx="12" fill="url(#cardGradient)" stroke="#10a37f" stroke-width="1" opacity="0.8"/>
+  
+  <!-- Header section -->
+  <g transform="translate(40, 40)">
+    <!-- Logo -->
+    <g transform="translate(0, 0)">
+      <circle cx="24" cy="24" r="22" fill="url(#accentGradient)" filter="url(#glow)"/>
+      <path d="M24 6 L39.86 15 L39.86 33 L24 42 L8.14 33 L8.14 15 Z" 
+            fill="#ffffff" 
+            opacity="0.95"/>
+      <path d="M16 16 Q24 16 24 20 Q24 24 20 24 Q24 24 24 28 Q24 32 32 32" 
+            stroke="#10a37f" 
+            stroke-width="3" 
+            fill="none"
+            stroke-linecap="round"/>
+    </g>
+    
+    <!-- Title and tagline -->
+    <g transform="translate(60, 0)">
+      <text x="0" y="20" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" filter="url(#textShadow)">
+        Semantest
+      </text>
+      <text x="0" y="40" fill="#10a37f" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500">
+        AI-Powered ChatGPT Extension
+      </text>
+    </g>
+  </g>
+  
+  <!-- Feature highlights -->
+  <g transform="translate(40, 100)">
+    <!-- Feature 1: Project Management -->
+    <g transform="translate(0, 0)">
+      <rect width="90" height="70" rx="8" fill="url(#cardGradient)" stroke="#10a37f" stroke-width="0.5" opacity="0.7"/>
+      <g transform="translate(10, 15)">
+        <!-- Project icon -->
+        <circle cx="10" cy="10" r="8" fill="#10a37f" opacity="0.3"/>
+        <rect x="4" y="6" width="12" height="8" rx="2" fill="#10a37f"/>
+        <text x="0" y="30" fill="#ffffff" font-family="system-ui" font-size="10" font-weight="600">
+          Project
+        </text>
+        <text x="0" y="42" fill="#ffffff" font-family="system-ui" font-size="10" font-weight="600">
+          Management
+        </text>
+        <text x="0" y="54" fill="#a0a0a0" font-family="system-ui" font-size="8">
+          Organize contexts
+        </text>
+      </g>
+    </g>
+    
+    <!-- Feature 2: Custom Instructions -->
+    <g transform="translate(110, 0)">
+      <rect width="90" height="70" rx="8" fill="url(#cardGradient)" stroke="#10a37f" stroke-width="0.5" opacity="0.7"/>
+      <g transform="translate(10, 15)">
+        <!-- Instructions icon -->
+        <rect x="6" y="4" width="16" height="12" rx="2" fill="#10a37f" opacity="0.3"/>
+        <rect x="8" y="6" width="12" height="2" fill="#10a37f"/>
+        <rect x="8" y="9" width="8" height="2" fill="#10a37f"/>
+        <rect x="8" y="12" width="10" height="2" fill="#10a37f"/>
+        <text x="0" y="30" fill="#ffffff" font-family="system-ui" font-size="10" font-weight="600">
+          Custom
+        </text>
+        <text x="0" y="42" fill="#ffffff" font-family="system-ui" font-size="10" font-weight="600">
+          Instructions
+        </text>
+        <text x="0" y="54" fill="#a0a0a0" font-family="system-ui" font-size="8">
+          Persistent prompts
+        </text>
+      </g>
+    </g>
+    
+    <!-- Feature 3: Quick Actions -->
+    <g transform="translate(220, 0)">
+      <rect width="90" height="70" rx="8" fill="url(#cardGradient)" stroke="#10a37f" stroke-width="0.5" opacity="0.7"/>
+      <g transform="translate(10, 15)">
+        <!-- Lightning icon -->
+        <path d="M14 4 L8 12 L12 12 L10 20 L16 12 L12 12 Z" fill="#10a37f"/>
+        <text x="0" y="30" fill="#ffffff" font-family="system-ui" font-size="10" font-weight="600">
+          Quick
+        </text>
+        <text x="0" y="42" fill="#ffffff" font-family="system-ui" font-size="10" font-weight="600">
+          Actions
+        </text>
+        <text x="0" y="54" fill="#a0a0a0" font-family="system-ui" font-size="8">
+          Keyboard shortcuts
+        </text>
+      </g>
+    </g>
+    
+    <!-- Feature 4: Image Downloads -->
+    <g transform="translate(330, 0)">
+      <rect width="60" height="70" rx="8" fill="url(#cardGradient)" stroke="#10a37f" stroke-width="0.5" opacity="0.7"/>
+      <g transform="translate(10, 15)">
+        <!-- Download icon -->
+        <rect x="6" y="4" width="12" height="10" rx="1" fill="#10a37f" opacity="0.3"/>
+        <path d="M12 6 L12 10 M10 8 L12 10 L14 8" stroke="#10a37f" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <rect x="8" y="14" width="8" height="2" fill="#10a37f"/>
+        <text x="0" y="30" fill="#ffffff" font-family="system-ui" font-size="10" font-weight="600">
+          Image
+        </text>
+        <text x="0" y="42" fill="#ffffff" font-family="system-ui" font-size="10" font-weight="600">
+          Downloads
+        </text>
+        <text x="0" y="54" fill="#a0a0a0" font-family="system-ui" font-size="8">
+          Save AI images
+        </text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- Bottom section -->
+  <g transform="translate(40, 190)">
+    <!-- Key benefit -->
+    <text x="0" y="20" fill="#ffffff" font-family="system-ui" font-size="16" font-weight="600" filter="url(#textShadow)">
+      Supercharge your ChatGPT workflow
+    </text>
+    <text x="0" y="40" fill="#c0c0c0" font-family="system-ui" font-size="12">
+      Organize projects • Save conversations • Download images • Quick prompts
+    </text>
+    
+    <!-- CTA -->
+    <g transform="translate(280, 10)">
+      <rect width="100" height="32" rx="16" fill="url(#accentGradient)" filter="url(#glow)"/>
+      <text x="50" y="21" fill="#ffffff" font-family="system-ui" font-size="12" font-weight="600" text-anchor="middle">
+        Add to Chrome
+      </text>
+    </g>
+  </g>
+  
+  <!-- Floating ChatGPT integration badge -->
+  <g transform="translate(350, 45)">
+    <circle cx="25" cy="15" r="12" fill="#10a37f" opacity="0.9"/>
+    <text x="25" y="19" fill="#ffffff" font-family="system-ui" font-size="8" font-weight="700" text-anchor="middle">
+      ChatGPT
+    </text>
+    <text x="25" y="35" fill="#10a37f" font-family="system-ui" font-size="8" font-weight="500" text-anchor="middle">
+      Enhanced
+    </text>
+  </g>
+  
+  <!-- Decorative elements -->
+  <g opacity="0.2">
+    <!-- Connection lines -->
+    <path d="M110 135 L220 135" stroke="#10a37f" stroke-width="1" stroke-dasharray="2,2"/>
+    <path d="M330 135 L380 135" stroke="#10a37f" stroke-width="1" stroke-dasharray="2,2"/>
+    
+    <!-- Subtle grid -->
+    <g opacity="0.3">
+      <line x1="0" y1="140" x2="440" y2="140" stroke="#10a37f" stroke-width="0.5"/>
+      <line x1="220" y1="0" x2="220" y2="280" stroke="#10a37f" stroke-width="0.5"/>
+    </g>
+  </g>
+</svg>

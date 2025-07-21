@@ -1,0 +1,117 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Definitions -->
+  <defs>
+    <!-- Main gradient -->
+    <linearGradient id="bgGradient128" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10a37f;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#0fa57a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d8f6f;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Inner glow gradient -->
+    <radialGradient id="innerGlow128">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0" />
+    </radialGradient>
+    
+    <!-- Shadow filter -->
+    <filter id="shadow128" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="2" result="offsetblur"/>
+      <feFlood flood-color="#000000" flood-opacity="0.2"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Logo shine effect -->
+    <linearGradient id="shine128" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0" />
+      <stop offset="50%" style="stop-color:#ffffff;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background Circle with subtle stroke -->
+  <circle cx="64" cy="64" r="60" fill="url(#bgGradient128)" stroke="#0a7d5f" stroke-width="1"/>
+  
+  <!-- Inner glow layers -->
+  <circle cx="64" cy="64" r="55" fill="url(#innerGlow128)"/>
+  <circle cx="64" cy="64" r="50" fill="#10a37f" opacity="0.1"/>
+  
+  <!-- Main Logo Container -->
+  <g transform="translate(64, 64)" filter="url(#shadow128)">
+    <!-- Hexagonal background with rounded corners -->
+    <path d="M0 -28 L24.25 -14 Q28 -12 28 -8 L28 8 Q28 12 24.25 14 L0 28 L-24.25 14 Q-28 12 -28 8 L-28 -8 Q-28 -12 -24.25 -14 Z" 
+          fill="#ffffff" 
+          opacity="0.95"/>
+    
+    <!-- Inner hexagon border -->
+    <path d="M0 -26 L22.5 -13 Q26 -11 26 -7 L26 7 Q26 11 22.5 13 L0 26 L-22.5 13 Q-26 11 -26 7 L-26 -7 Q-26 -11 -22.5 -13 Z" 
+          fill="none"
+          stroke="#10a37f"
+          stroke-width="0.5"
+          opacity="0.3"/>
+    
+    <!-- Semantest S Logo -->
+    <g transform="scale(1.2)">
+      <!-- Shadow S -->
+      <path d="M-10 -10 Q0 -10 0 -5 Q0 0 -5 0 Q0 0 0 5 Q0 10 10 10" 
+            stroke="#000000" 
+            stroke-width="6" 
+            fill="none"
+            stroke-linecap="round"
+            opacity="0.1"
+            transform="translate(1, 2)"/>
+      
+      <!-- Outer glow S -->
+      <path d="M-10 -10 Q0 -10 0 -5 Q0 0 -5 0 Q0 0 0 5 Q0 10 10 10" 
+            stroke="#10a37f" 
+            stroke-width="8" 
+            fill="none"
+            stroke-linecap="round"
+            opacity="0.2"/>
+      
+      <!-- Main S stroke -->
+      <path d="M-10 -10 Q0 -10 0 -5 Q0 0 -5 0 Q0 0 0 5 Q0 10 10 10" 
+            stroke="#0d8f6f" 
+            stroke-width="5" 
+            fill="none"
+            stroke-linecap="round"/>
+      
+      <!-- Inner highlight S -->
+      <path d="M-10 -10 Q0 -10 0 -5 Q0 0 -5 0 Q0 0 0 5 Q0 10 10 10" 
+            stroke="#10a37f" 
+            stroke-width="3" 
+            fill="none"
+            stroke-linecap="round"/>
+    </g>
+    
+    <!-- Decorative elements -->
+    <g opacity="0.4">
+      <!-- Top left dot -->
+      <circle cx="-20" cy="-20" r="2.5" fill="#10a37f"/>
+      <!-- Top right dot -->
+      <circle cx="20" cy="-20" r="2.5" fill="#10a37f"/>
+      <!-- Bottom left dot -->
+      <circle cx="-20" cy="20" r="2.5" fill="#10a37f"/>
+      <!-- Bottom right dot -->
+      <circle cx="20" cy="20" r="2.5" fill="#10a37f"/>
+    </g>
+    
+    <!-- Hexagon shine overlay -->
+    <path d="M0 -28 L24.25 -14 Q28 -12 28 -8 L28 8 Q28 12 24.25 14 L0 28 L-24.25 14 Q-28 12 -28 8 L-28 -8 Q-28 -12 -24.25 -14 Z" 
+          fill="url(#shine128)" 
+          opacity="0.5"/>
+  </g>
+  
+  <!-- Top highlight -->
+  <ellipse cx="56" cy="32" rx="20" ry="12" fill="#ffffff" opacity="0.15"/>
+  
+  <!-- Brand mark - small hexagon pattern -->
+  <g transform="translate(96, 96)" opacity="0.2">
+    <path d="M0 -4 L3.46 -2 L3.46 2 L0 4 L-3.46 2 L-3.46 -2 Z" fill="#ffffff"/>
+  </g>
+</svg>
