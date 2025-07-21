@@ -16,7 +16,6 @@ class BackgroundServiceWorker {
   }
 
   init() {
-    console.log('[Background] Service Worker initializing...');
     
     // Set up event listeners
     this.setupInstallationHandlers();
@@ -25,13 +24,11 @@ class BackgroundServiceWorker {
     this.setupContextMenus();
     this.setupCommandHandlers();
     
-    console.log('[Background] Service Worker initialized');
   }
 
   setupInstallationHandlers() {
     // Extension installation
     chrome.runtime.onInstalled.addListener((details) => {
-      console.log('[Background] Extension installed:', details.reason);
       
       if (details.reason === 'install') {
         this.handleFirstInstall();
@@ -42,13 +39,11 @@ class BackgroundServiceWorker {
 
     // Extension startup
     chrome.runtime.onStartup.addListener(() => {
-      console.log('[Background] Extension startup');
       this.refreshChatGPTTabs();
     });
   }
 
   async handleFirstInstall() {
-    console.log('[Background] First time installation');
     
     // Set default settings
     await chrome.storage.sync.set({
@@ -66,7 +61,6 @@ class BackgroundServiceWorker {
   }
 
   async handleUpdate(previousVersion) {
-    console.log('[Background] Extension updated from:', previousVersion);
     
     // Handle version-specific migrations
     if (previousVersion && this.needsMigration(previousVersion)) {
@@ -100,7 +94,6 @@ class BackgroundServiceWorker {
 
   async handleTabUpdate(tabId, tab) {
     if (this.isChatGPTUrl(tab.url)) {
-      console.log('[Background] ChatGPT tab detected:', tabId);
       
       // Register ChatGPT tab
       this.chatGPTTabs.set(tabId, {
@@ -123,13 +116,11 @@ class BackgroundServiceWorker {
     const tab = await chrome.tabs.get(tabId).catch(() => null);
     if (tab && this.isChatGPTUrl(tab.url)) {
       this.extensionState.activeTab = tabId;
-      console.log('[Background] ChatGPT tab activated:', tabId);
     }
   }
 
   handleTabRemoval(tabId) {
     if (this.chatGPTTabs.has(tabId)) {
-      console.log('[Background] ChatGPT tab removed:', tabId);
       this.chatGPTTabs.delete(tabId);
       
       if (this.extensionState.activeTab === tabId) {
@@ -159,17 +150,14 @@ class BackgroundServiceWorker {
           files: ['src/content/chatgpt-controller.js']
         });
         
-        console.log('[Background] Content script injected into tab:', tabId);
       }
     } catch (error) {
-      console.error('[Background] Failed to inject content script:', error);
     }
   }
 
   setupMessageHandlers() {
     // Messages from content scripts
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      console.log('[Background] Message received:', request.action, 'from:', sender.tab?.id);
       
       // Handle async responses
       (async () => {
@@ -207,7 +195,6 @@ class BackgroundServiceWorker {
           
           sendResponse(response);
         } catch (error) {
-          console.error('[Background] Message handler error:', error);
           sendResponse({ success: false, error: error.message });
         }
       })();
@@ -224,7 +211,6 @@ class BackgroundServiceWorker {
   }
 
   async handleControllerReady(tabId) {
-    console.log('[Background] Controller ready in tab:', tabId);
     
     const tabInfo = this.chatGPTTabs.get(tabId);
     if (tabInfo) {
@@ -236,7 +222,6 @@ class BackgroundServiceWorker {
   }
 
   async handleControllerError(tabId, error) {
-    console.error('[Background] Controller error in tab:', tabId, error);
     
     this.extensionState.errors.push({
       tabId,
@@ -248,7 +233,6 @@ class BackgroundServiceWorker {
   }
 
   setupPopupConnection(port) {
-    console.log('[Background] Popup connected');
     
     port.onMessage.addListener(async (message) => {
       try {
@@ -281,13 +265,11 @@ class BackgroundServiceWorker {
         
         port.postMessage(response);
       } catch (error) {
-        console.error('[Background] Popup message error:', error);
         port.postMessage({ success: false, error: error.message });
       }
     });
 
     port.onDisconnect.addListener(() => {
-      console.log('[Background] Popup disconnected');
     });
   }
 
@@ -321,7 +303,6 @@ class BackgroundServiceWorker {
   }
 
   async handleContextMenuClick(info, tab) {
-    console.log('[Background] Context menu clicked:', info.menuItemId);
     
     switch (info.menuItemId) {
       case 'chatgpt-create-project':
@@ -345,11 +326,9 @@ class BackgroundServiceWorker {
   setupCommandHandlers() {
     // Keyboard shortcuts
     chrome.commands.onCommand.addListener(async (command) => {
-      console.log('[Background] Command triggered:', command);
       
       const activeTab = await this.getActiveChatGPTTab();
       if (!activeTab) {
-        console.log('[Background] No active ChatGPT tab for command');
         return;
       }
       
@@ -378,7 +357,6 @@ class BackgroundServiceWorker {
       throw new Error('ChatGPT controller not ready');
     }
 
-    console.log('[Background] Executing command:', command, 'in tab:', targetTabId);
 
     try {
       const response = await chrome.tabs.sendMessage(targetTabId, {
@@ -396,7 +374,6 @@ class BackgroundServiceWorker {
 
       return response;
     } catch (error) {
-      console.error('[Background] Command execution failed:', error);
       throw error;
     }
   }
@@ -451,7 +428,6 @@ class BackgroundServiceWorker {
       }
     }
     
-    console.log('[Background] Refreshed ChatGPT tabs:', this.chatGPTTabs.size);
   }
 
   // Settings Management
@@ -468,7 +444,6 @@ class BackgroundServiceWorker {
 
   async updateSettings(newSettings) {
     await chrome.storage.sync.set(newSettings);
-    console.log('[Background] Settings updated:', newSettings);
     
     return { success: true };
   }
@@ -491,7 +466,6 @@ class BackgroundServiceWorker {
   // Image Download Method
   async downloadImage(url, filename) {
     try {
-      console.log('[Background] Downloading image:', filename);
       
       // Use Chrome downloads API
       const downloadId = await chrome.downloads.download({
@@ -507,11 +481,9 @@ class BackgroundServiceWorker {
           if (delta.id === downloadId) {
             if (delta.state && delta.state.current === 'complete') {
               chrome.downloads.onChanged.removeListener(checkDownload);
-              console.log('[Background] Image download complete:', filename);
               resolve({ success: true, downloadId });
             } else if (delta.state && delta.state.current === 'interrupted') {
               chrome.downloads.onChanged.removeListener(checkDownload);
-              console.error('[Background] Image download failed:', filename);
               resolve({ success: false, error: 'Download interrupted' });
             }
           }
@@ -527,14 +499,12 @@ class BackgroundServiceWorker {
       });
       
     } catch (error) {
-      console.error('[Background] Download error:', error);
       return { success: false, error: error.message };
     }
   }
 
   // Error Handling
   handleError(error, context = '') {
-    console.error(`[Background] Error ${context}:`, error);
     
     this.extensionState.errors.push({
       error: error.message || error,
@@ -561,4 +531,3 @@ chrome.runtime.onMessage.addListener(() => {
   return true;
 });
 
-console.log('[Background] Service Worker loaded');

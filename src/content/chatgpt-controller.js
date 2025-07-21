@@ -40,34 +40,22 @@ class ChatGPTController {
   }
 
   async init() {
-    console.log('[ChatGPT Controller] Initializing...');
-    
     try {
-      // Wait for ChatGPT to load
       await this.waitForChatGPTLoad();
       this.isInitialized = true;
-      console.log('[ChatGPT Controller] Initialized successfully');
-      
-      // Set up message listener for commands from extension
       this.setupMessageListener();
-      
-      // Notify that controller is ready
       this.sendMessage({ type: 'CONTROLLER_READY' });
     } catch (error) {
-      console.error('[ChatGPT Controller] Initialization failed:', error);
       this.sendMessage({ type: 'CONTROLLER_ERROR', error: error.message });
     }
   }
 
   async waitForChatGPTLoad() {
-    // Wait for essential elements to be present
     await this.waitForSelector(this.selectors.chatInput, 15000);
-    console.log('[ChatGPT Controller] ChatGPT interface loaded');
   }
 
   setupMessageListener() {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      console.log('[ChatGPT Controller] Received command:', request.action);
       
       // Handle async operations
       (async () => {
@@ -115,7 +103,6 @@ class ChatGPTController {
           
           sendResponse(result);
         } catch (error) {
-          console.error('[ChatGPT Controller] Command error:', error);
           sendResponse({ success: false, error: error.message });
         }
       })();
@@ -127,7 +114,6 @@ class ChatGPTController {
   // 1. Create New Project
   async createProject(projectName) {
     try {
-      console.log('[ChatGPT Controller] Creating project:', projectName);
       
       // Look for new project button
       const newProjectBtn = await this.findElement(this.selectors.newProjectButton);
@@ -158,11 +144,9 @@ class ChatGPTController {
       await this.clickElement(createBtn);
       await this.delay(1000);
       
-      console.log('[ChatGPT Controller] Project created successfully');
       return { success: true, projectName };
       
     } catch (error) {
-      console.error('[ChatGPT Controller] Failed to create project:', error);
       return { success: false, error: error.message };
     }
   }
@@ -170,7 +154,6 @@ class ChatGPTController {
   // 2. Set Custom Instructions
   async setCustomInstructions(aboutUser, aboutModel) {
     try {
-      console.log('[ChatGPT Controller] Setting custom instructions');
       
       // Open profile menu
       const profileBtn = await this.findElement(this.selectors.profileButton);
@@ -226,11 +209,9 @@ class ChatGPTController {
       await this.clickElement(saveBtn);
       await this.delay(1000);
       
-      console.log('[ChatGPT Controller] Custom instructions set successfully');
       return { success: true };
       
     } catch (error) {
-      console.error('[ChatGPT Controller] Failed to set custom instructions:', error);
       return { success: false, error: error.message };
     }
   }
@@ -238,7 +219,6 @@ class ChatGPTController {
   // 3. Create New Chat
   async createNewChat() {
     try {
-      console.log('[ChatGPT Controller] Creating new chat');
       
       // Find new chat button
       const newChatBtn = await this.findElement(this.selectors.newChatButton);
@@ -252,11 +232,9 @@ class ChatGPTController {
       // Wait for chat input to be ready
       await this.waitForSelector(this.selectors.chatInput);
       
-      console.log('[ChatGPT Controller] New chat created successfully');
       return { success: true };
       
     } catch (error) {
-      console.error('[ChatGPT Controller] Failed to create new chat:', error);
       return { success: false, error: error.message };
     }
   }
@@ -264,7 +242,6 @@ class ChatGPTController {
   // 4. Send Prompt
   async sendPrompt(text) {
     try {
-      console.log('[ChatGPT Controller] Sending prompt:', text.substring(0, 50) + '...');
       
       // Find chat input
       const chatInput = await this.waitForSelector(this.selectors.chatInput);
@@ -287,11 +264,9 @@ class ChatGPTController {
       // Wait for response to start
       await this.waitForResponse();
       
-      console.log('[ChatGPT Controller] Prompt sent successfully');
       return { success: true, prompt: text };
       
     } catch (error) {
-      console.error('[ChatGPT Controller] Failed to send prompt:', error);
       return { success: false, error: error.message };
     }
   }
@@ -299,7 +274,6 @@ class ChatGPTController {
   // 5. Image Detection and Download
   async detectAndDownloadImages(options = {}) {
     try {
-      console.log('[ChatGPT Controller] Detecting DALL-E images');
       
       // Find all images in the chat
       const images = await this.findAllImages();
@@ -307,7 +281,6 @@ class ChatGPTController {
         return { success: false, error: 'No images found' };
       }
       
-      console.log(`[ChatGPT Controller] Found ${images.length} images`);
       
       // Download images
       const downloadResults = [];
@@ -324,7 +297,6 @@ class ChatGPTController {
       };
       
     } catch (error) {
-      console.error('[ChatGPT Controller] Failed to download images:', error);
       return { success: false, error: error.message };
     }
   }
@@ -387,7 +359,6 @@ class ChatGPTController {
       // Method 1: Try native download button if available
       const downloadButton = await this.findImageDownloadButton(element);
       if (downloadButton) {
-        console.log('[ChatGPT Controller] Using native download button');
         await this.clickElement(downloadButton);
         return { success: true, method: 'native', filename, url };
       }
@@ -403,7 +374,6 @@ class ChatGPTController {
       return { success: true, method: 'link', filename, url };
       
     } catch (error) {
-      console.error('[ChatGPT Controller] Image download failed:', error);
       return { success: false, error: error.message, url: imageData.url };
     }
   }
@@ -481,7 +451,6 @@ class ChatGPTController {
   // 6. Request DALL-E Image Generation
   async requestDALLEImage(prompt, options = {}) {
     try {
-      console.log('[ChatGPT Controller] Requesting DALL-E image:', prompt);
       
       // Ensure we're using a model that supports DALL-E
       const modelCheck = await this.ensureDALLEModel();
@@ -496,7 +465,6 @@ class ChatGPTController {
       }
       
       // Wait for image to appear
-      console.log('[ChatGPT Controller] Waiting for image generation...');
       const imageAppeared = await this.waitForImageGeneration(30000);
       
       if (!imageAppeared) {
@@ -519,7 +487,6 @@ class ChatGPTController {
       return { success: true, imageGenerated: true };
       
     } catch (error) {
-      console.error('[ChatGPT Controller] Failed to request DALL-E image:', error);
       return { success: false, error: error.message };
     }
   }
@@ -533,7 +500,6 @@ class ChatGPTController {
     }
     
     // Try to switch to GPT-4 (which typically has DALL-E)
-    console.log('[ChatGPT Controller] Attempting to switch to DALL-E capable model');
     // Implementation would go here
     
     return { success: true }; // Assume it's available for now
@@ -567,13 +533,11 @@ class ChatGPTController {
     try {
       // Wait for streaming indicator to appear
       await this.waitForSelector(this.selectors.streamingIndicator, 5000);
-      console.log('[ChatGPT Controller] Response started');
       
       // Optionally wait for streaming to complete
       await this.waitForStreamingComplete();
       
     } catch (error) {
-      console.log('[ChatGPT Controller] Could not detect streaming indicator');
     }
   }
 
@@ -583,13 +547,11 @@ class ChatGPTController {
     while (Date.now() - startTime < timeout) {
       const streamingElement = document.querySelector(this.selectors.streamingIndicator);
       if (!streamingElement) {
-        console.log('[ChatGPT Controller] Streaming complete');
         return true;
       }
       await this.delay(500);
     }
     
-    console.log('[ChatGPT Controller] Streaming timeout reached');
     return false;
   }
 
@@ -724,4 +686,3 @@ if (document.readyState === 'loading') {
   window.chatGPTController = new ChatGPTController();
 }
 
-console.log('[ChatGPT Controller] Script loaded');
