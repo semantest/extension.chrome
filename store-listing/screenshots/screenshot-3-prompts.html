@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semantest - Quick Prompts</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 1280px;
+      height: 800px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      overflow: hidden;
+    }
+    
+    .showcase-container {
+      display: flex;
+      align-items: center;
+      gap: 60px;
+    }
+    
+    .extension-popup {
+      width: 380px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .popup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      background: #10a37f;
+      color: white;
+    }
+    
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .logo {
+      width: 28px;
+      height: 28px;
+    }
+    
+    .app-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    
+    .prompt-section {
+      padding: 20px;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    .prompt-container {
+      position: relative;
+    }
+    
+    .prompt-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 12px;
+      border: 2px solid #10a37f;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.5;
+      resize: vertical;
+      font-family: inherit;
+      color: #1f2937;
+      transition: all 0.2s;
+      background: #f0fdf4;
+    }
+    
+    .prompt-textarea:focus {
+      outline: none;
+      border-color: #0e9066;
+      background: white;
+    }
+    
+    .prompt-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    
+    .action-button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .action-button.secondary {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+    
+    .action-button.secondary:hover {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    
+    .action-button.primary {
+      background: #10a37f;
+      color: white;
+      flex: 1;
+    }
+    
+    .action-button.primary:hover {
+      background: #0e9066;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+    }
+    
+    .keyboard-hint {
+      position: absolute;
+      bottom: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #374151;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .keyboard-hint::before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 8px;
+      background: #374151;
+      transform: translateX(-50%) rotate(45deg);
+    }
+    
+    .key {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    
+    .recent-prompts {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .recent-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+    
+    .prompt-chip {
+      display: inline-block;
+      padding: 6px 12px;
+      background: #f3f4f6;
+      border-radius: 16px;
+      font-size: 12px;
+      color: #374151;
+      margin: 0 6px 6px 0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .prompt-chip:hover {
+      background: #e5e7eb;
+      transform: translateY(-1px);
+    }
+    
+    .feature-highlights {
+      max-width: 400px;
+    }
+    
+    .highlight-title {
+      font-size: 42px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 20px;
+      line-height: 1.2;
+    }
+    
+    .highlight-subtitle {
+      font-size: 20px;
+      color: #6b7280;
+      margin-bottom: 40px;
+      line-height: 1.5;
+    }
+    
+    .speed-comparison {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      margin-bottom: 32px;
+    }
+    
+    .comparison-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 16px;
+    }
+    
+    .workflow-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    
+    .workflow-label {
+      font-size: 15px;
+      color: #374151;
+    }
+    
+    .workflow-time {
+      font-size: 14px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+    
+    .time-old {
+      background: #fee2e2;
+      color: #dc2626;
+      text-decoration: line-through;
+    }
+    
+    .time-new {
+      background: #d1fae5;
+      color: #059669;
+    }
+    
+    .feature-list {
+      list-style: none;
+    }
+    
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: white;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .feature-content h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 4px;
+    }
+    
+    .feature-content p {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="showcase-container">
+    <!-- Extension Popup -->
+    <div class="extension-popup">
+      <header class="popup-header">
+        <div class="logo-section">
+          <svg class="logo" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2"/>
+            <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2"/>
+            <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2"/>
+          </svg>
+          <h1 class="app-title">Semantest</h1>
+        </div>
+      </header>
+      
+      <section class="prompt-section">
+        <div class="section-header">
+          <h2 class="section-title">Quick Prompt</h2>
+        </div>
+        
+        <div class="prompt-container">
+          <textarea class="prompt-textarea">Analyze the customer feedback data from last quarter and identify the top 3 improvement areas. Create an actionable plan with specific metrics and timelines.</textarea>
+          
+          <div class="prompt-actions">
+            <button class="action-button secondary">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Clear
+            </button>
+            <button class="action-button primary">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M2 8h12M12 8l-4-4M12 8l-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Send Prompt
+            </button>
+          </div>
+          
+          <div class="keyboard-hint">
+            <span>Press</span>
+            <span class="key">Ctrl</span>
+            <span>+</span>
+            <span class="key">Enter</span>
+            <span>to send</span>
+          </div>
+        </div>
+        
+        <div class="recent-prompts">
+          <p class="recent-title">RECENT PROMPTS</p>
+          <div>
+            <span class="prompt-chip">Summarize in 3 bullets</span>
+            <span class="prompt-chip">Code review this function</span>
+            <span class="prompt-chip">Explain like I'm 5</span>
+            <span class="prompt-chip">Find potential issues</span>
+          </div>
+        </div>
+      </section>
+    </div>
+    
+    <!-- Feature Highlights -->
+    <div class="feature-highlights">
+      <h2 class="highlight-title">Send Prompts Lightning Fast</h2>
+      <p class="highlight-subtitle">Skip the ChatGPT tab switching and send prompts directly from any webpage</p>
+      
+      <div class="speed-comparison">
+        <p class="comparison-title">WORKFLOW COMPARISON</p>
+        <div class="workflow-item">
+          <span class="workflow-label">Traditional ChatGPT</span>
+          <span class="workflow-time time-old">15-20 seconds</span>
+        </div>
+        <div class="workflow-item">
+          <span class="workflow-label">With Semantest</span>
+          <span class="workflow-time time-new">2 seconds</span>
+        </div>
+      </div>
+      
+      <ul class="feature-list">
+        <li class="feature-item">
+          <div class="feature-icon">⌨️</div>
+          <div class="feature-content">
+            <h3>Keyboard Shortcuts</h3>
+            <p>Send prompts instantly with Ctrl+Enter</p>
+          </div>
+        </li>
+        <li class="feature-item">
+          <div class="feature-icon">📝</div>
+          <div class="feature-content">
+            <h3>Prompt History</h3>
+            <p>Reuse your best prompts with one click</p>
+          </div>
+        </li>
+        <li class="feature-item">
+          <div class="feature-icon">🎯</div>
+          <div class="feature-content">
+            <h3>Context Aware</h3>
+            <p>Prompts use your current project settings</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
