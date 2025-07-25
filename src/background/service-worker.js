@@ -400,6 +400,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
             'src/addons/chatgpt/test-slash-command.js',
             'src/addons/chatgpt/tools-menu-helper.js',
             'src/addons/chatgpt/simple-test.js',
+            'src/addons/chatgpt/emergency-fix.js',
             'src/addons/chatgpt/index.js'
           ],
           world: 'MAIN'
