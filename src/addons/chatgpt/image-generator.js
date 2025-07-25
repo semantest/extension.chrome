@@ -5,8 +5,63 @@ async function generateImage(promptText) {
   console.log('🖼️ Starting image generation with prompt:', promptText);
   
   try {
-    // Step 1: Find and click the "Create image" tool button
-    console.log('🔍 Looking for "Create image" tool...');
+    // Step 1: First check if we're already in image mode
+    const currentPlaceholder = document.querySelector('#prompt-textarea')?.getAttribute('placeholder');
+    if (currentPlaceholder?.toLowerCase().includes('image')) {
+      console.log('✅ Already in image generation mode!');
+      // Skip to entering the prompt
+      return await enterImagePrompt(promptText);
+    }
+    
+    // Step 2: Find and click the Tools menu button first
+    console.log('🔍 Looking for Tools menu button...');
+    
+    // Find the tools menu button (the one you mentioned)
+    const toolsMenuButton = document.querySelector('button[id^="radix-"][aria-haspopup="menu"]') ||
+                           document.querySelector('button[aria-label="Tools"]') ||
+                           document.querySelector('button[title="Tools"]');
+    
+    if (toolsMenuButton) {
+      console.log('🔧 Found Tools menu button, clicking...');
+      toolsMenuButton.click();
+      
+      // Wait for menu to appear
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Now look for "Create image" in the menu
+      console.log('🔍 Looking for "Create image" in menu...');
+      
+      // Find menu items
+      const menuItems = document.querySelectorAll('[role="menuitem"], [role="option"], button[class*="menu"], div[class*="menu"]');
+      
+      let createImageOption = null;
+      for (const item of menuItems) {
+        const text = item.textContent?.trim() || '';
+        if (text.toLowerCase().includes('create image') || 
+            text.toLowerCase().includes('dall')) {
+          createImageOption = item;
+          console.log('✅ Found "Create image" option:', text);
+          break;
+        }
+      }
+      
+      if (createImageOption) {
+        console.log('🖱️ Clicking "Create image" option...');
+        createImageOption.click();
+        
+        // Wait for image mode to activate
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Now enter the prompt
+        return await enterImagePrompt(promptText);
+      } else {
+        console.log('❌ Could not find "Create image" in menu');
+        // Try the old approach as fallback
+      }
+    }
+    
+    // Fallback: Try to find "Create image" directly
+    console.log('🔍 Fallback: Looking for "Create image" tool directly...');
     
     // Different selectors to find the image generation tool
     const imageToolSelectors = [
@@ -147,54 +202,30 @@ async function generateImage(promptText) {
       
       console.log('Potentially relevant buttons:', relevantButtons);
       
-      // Check if we're already in image mode
-      const currentPromptPlaceholder = document.querySelector('#prompt-textarea')?.getAttribute('placeholder');
-      if (currentPromptPlaceholder?.toLowerCase().includes('image')) {
-        console.log('✅ Already in image generation mode!');
-        // Skip clicking the tool and proceed directly to entering prompt
-      } else {
-        // Check if image generation is available via the tools menu
-        const toolsButton = document.querySelector('button[aria-label="Main menu"]') ||
-                           document.querySelector('button[aria-label="Tools"]') ||
-                           document.querySelector('button[id="radix-:r4:"]');
-        
-        if (toolsButton) {
-          console.log('⚠️ Image tool might be in the tools menu. User needs to enable "Create image" tool.');
-          throw new Error('Could not find "Create image" tool. Please enable it from the tools menu (sparkle icon) and try again.');
-        } else {
-          throw new Error('Could not find "Create image" tool. Make sure you have access to DALL-E and the tool is enabled.');
-        }
-      }
+      throw new Error('Could not find "Create image" tool. Please click the Tools icon and enable "Create image" first.');
     } else {
       // Click the image tool
       console.log('🖱️ Clicking image tool...');
       imageToolButton.click();
       
-      // Also dispatch click event to be sure
-      const clickEvent = new MouseEvent('click', {
-        bubbles: true,
-        cancelable: true,
-        view: window
-      });
-      imageToolButton.dispatchEvent(clickEvent);
-      
       // Wait for the image interface to appear
       console.log('⏳ Waiting for image generation interface...');
       await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
-    // Step 2: Check if we successfully entered image mode
-    const newPlaceholder = document.querySelector('#prompt-textarea')?.getAttribute('placeholder');
-    if (imageToolButton && !newPlaceholder?.toLowerCase().includes('image')) {
-      console.log('⚠️ Tool click might not have worked. Retrying...');
       
-      // Try clicking again with focus
-      imageToolButton.focus();
-      imageToolButton.click();
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      return await enterImagePrompt(promptText);
     }
     
-    // Step 3: Find the image prompt input field
+  } catch (error) {
+    console.error('❌ Error generating image:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Separate function to handle entering the prompt once in image mode
+async function enterImagePrompt(promptText) {
+  try {
+    
+    // Find the image prompt input field
     console.log('🔍 Looking for image prompt input...');
     
     // The image tool might open a modal or change the input area
@@ -282,22 +313,38 @@ async function generateImage(promptText) {
     
     let generateButton = null;
     
-    // Look for button near the input first (but skip upload button)
+    // Look for button near the input first (but skip upload and tool buttons)
     const inputContainer = imageInput.closest('form') || imageInput.parentElement?.parentElement;
     if (inputContainer) {
       const nearbyButtons = inputContainer.querySelectorAll('button:not([disabled])');
       for (const btn of nearbyButtons) {
-        // Skip the upload/attachment button
+        const ariaLabel = btn.getAttribute('aria-label')?.toLowerCase() || '';
+        const btnId = btn.id?.toLowerCase() || '';
+        
+        // Skip unwanted buttons
         if (btn.id === 'upload-file-btn' || 
-            btn.getAttribute('aria-label')?.toLowerCase().includes('file') ||
-            btn.getAttribute('aria-label')?.toLowerCase().includes('upload') ||
-            btn.getAttribute('aria-label')?.toLowerCase().includes('attach')) {
+            btn.id === 'system-hint-button' ||
+            ariaLabel.includes('file') ||
+            ariaLabel.includes('upload') ||
+            ariaLabel.includes('attach') ||
+            ariaLabel.includes('choose tool') ||
+            btnId.includes('hint')) {
+          console.log('🚫 Skipping button:', btn.id, ariaLabel);
           continue;
         }
         
-        if (!btn.disabled && btn.offsetParent) {
+        // Look for send/submit button specifically
+        if (!btn.disabled && btn.offsetParent && 
+            (btn.type === 'submit' || 
+             ariaLabel.includes('send') ||
+             btn.querySelector('svg'))) {
           generateButton = btn;
-          console.log('✅ Found send button near input:', btn);
+          console.log('✅ Found send button near input:', {
+            id: btn.id,
+            type: btn.type,
+            ariaLabel: btn.getAttribute('aria-label'),
+            hasSvg: btn.querySelector('svg') !== null
+          });
           break;
         }
       }
@@ -348,17 +395,32 @@ async function generateImage(promptText) {
         });
       });
       
-      // Try to find the send button by looking for the last non-upload button
-      const formButtons = Array.from(allFormButtons).filter(btn => 
-        btn.id !== 'upload-file-btn' && 
-        !btn.getAttribute('aria-label')?.toLowerCase().includes('file') &&
-        !btn.disabled &&
-        btn.offsetParent !== null
+      // Try to find the send button by looking for the last non-upload/non-tool button
+      const formButtons = Array.from(allFormButtons).filter(btn => {
+        const ariaLabel = btn.getAttribute('aria-label')?.toLowerCase() || '';
+        return btn.id !== 'upload-file-btn' && 
+               btn.id !== 'system-hint-button' &&
+               !ariaLabel.includes('file') &&
+               !ariaLabel.includes('choose tool') &&
+               !btn.disabled &&
+               btn.offsetParent !== null;
+      });
+      
+      console.log(`Found ${formButtons.length} potential send buttons after filtering`);
+      
+      // Look for the actual send button (usually has an SVG arrow)
+      const sendButton = formButtons.find(btn => 
+        btn.querySelector('svg path[d*="M"]') || // Arrow path
+        btn.getAttribute('aria-label')?.toLowerCase().includes('send')
       );
       
-      if (formButtons.length > 0) {
+      if (sendButton) {
+        generateButton = sendButton;
+        console.log('✅ Found send button by SVG/aria:', sendButton);
+      } else if (formButtons.length > 0) {
+        // Fallback to last button
         generateButton = formButtons[formButtons.length - 1];
-        console.log('✅ Found send button by elimination:', generateButton);
+        console.log('✅ Found send button by position:', generateButton);
       } else {
         console.log('⚠️ Falling back to Enter key...');
         
@@ -390,7 +452,7 @@ async function generateImage(promptText) {
     };
     
   } catch (error) {
-    console.error('❌ Error generating image:', error);
+    console.error('❌ Error entering image prompt:', error);
     return { success: false, error: error.message };
   }
 }

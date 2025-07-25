@@ -397,6 +397,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
             'src/addons/chatgpt/direct-send.js',
             'src/addons/chatgpt/image-generator.js',
             'src/addons/chatgpt/debug-tools.js',
+            'src/addons/chatgpt/test-slash-command.js',
+            'src/addons/chatgpt/tools-menu-helper.js',
+            'src/addons/chatgpt/simple-test.js',
             'src/addons/chatgpt/index.js'
           ],
           world: 'MAIN'

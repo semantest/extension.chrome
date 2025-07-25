@@ -11,29 +11,41 @@ function debugChatGPTInterface() {
   console.log('🎯 In image mode?', placeholder?.toLowerCase().includes('image') ? 'YES' : 'NO');
   
   // 2. Find tools menu button
-  const toolsMenuSelectors = [
-    'button[aria-label="Main menu"]',
-    'button[aria-label="Tools"]',
-    'button[id*="radix"]',
-    'button svg path[d*="M12"]', // Sparkle icon
-    'button:has(svg path[d*="M12"])'
-  ];
+  console.log('
+🔍 Looking for tools/menu buttons...');
   
-  let toolsButton = null;
-  for (const selector of toolsMenuSelectors) {
-    try {
-      const btn = document.querySelector(selector);
-      if (btn?.offsetParent) {
-        toolsButton = btn;
-        break;
-      }
-    } catch (e) {}
-  }
+  // Look for buttons with SVG icons that might be the tools menu
+  const allButtons = [...document.querySelectorAll('button')];
+  const menuButtons = allButtons.filter(btn => {
+    // Check if button has an SVG child
+    const hasSvg = btn.querySelector('svg') !== null;
+    // Check if it's visible
+    const isVisible = btn.offsetParent !== null;
+    // Check if it has menu attributes
+    const hasMenuAttrs = btn.getAttribute('aria-haspopup') === 'menu' || 
+                        btn.getAttribute('data-state') === 'closed' ||
+                        btn.getAttribute('data-state') === 'open';
+    
+    return isVisible && (hasSvg || hasMenuAttrs);
+  });
   
-  console.log('🔧 Tools menu button:', toolsButton ? 'FOUND' : 'NOT FOUND');
+  console.log(`Found ${menuButtons.length} potential menu buttons:`);
+  menuButtons.forEach((btn, idx) => {
+    const svgPath = btn.querySelector('svg path')?.getAttribute('d')?.substring(0, 50) || 'no path';
+    console.log(`  ${idx + 1}. ID: "${btn.id}"`,
+                `| Class: "${btn.className}"`,
+                `| Aria-haspopup: "${btn.getAttribute('aria-haspopup')}"`,
+                `| SVG path: "${svgPath}..."`);
+  });
+  
+  // Check for the specific button found
+  const toolsButton = document.querySelector('button[id^="radix-"][aria-haspopup="menu"]');
+  console.log('
+🔧 Tools menu button:', toolsButton ? 'FOUND' : 'NOT FOUND');
   if (toolsButton) {
-    console.log('   Button:', toolsButton);
-    console.log('   Aria-label:', toolsButton.getAttribute('aria-label'));
+    console.log('   Button ID:', toolsButton.id);
+    console.log('   Has SVG:', toolsButton.querySelector('svg') !== null);
+    console.log('   Is expanded:', toolsButton.getAttribute('aria-expanded'));
   }
   
   // 3. Check for image-related buttons
@@ -57,27 +69,43 @@ function debugChatGPTInterface() {
                 `| Visible:`, btn.offsetParent !== null);
   });
   
-  // 4. Check sparkle/tools buttons
-  console.log('\n🌟 Looking for sparkle/tools buttons...');
-  const sparkleButtons = allButtons.filter(btn => {
-    // Check for sparkle SVG path
-    const hasSparklePath = btn.querySelector('svg path[d*="M12 2"]') || 
-                          btn.querySelector('svg path[d*="m12 2"]');
-    return hasSparklePath && btn.offsetParent;
+  // 4. Check for "Create image" in the current interface
+  console.log('\n🌟 Looking for "Create image" tool...');
+  
+  // Sometimes the tool is already in the interface as a button
+  const createImageButtons = allButtons.filter(btn => {
+    const text = btn.textContent?.toLowerCase() || '';
+    const aria = btn.getAttribute('aria-label')?.toLowerCase() || '';
+    return (text.includes('create image') || aria.includes('create image')) && 
+           btn.offsetParent;
   });
   
-  console.log(`Found ${sparkleButtons.length} sparkle buttons:`);
-  sparkleButtons.forEach((btn, idx) => {
-    console.log(`  ${idx + 1}. ID: "${btn.id}"`, 
-                `| Aria: "${btn.getAttribute('aria-label')}"`,
-                `| Class: "${btn.className}"`);
-  });
+  if (createImageButtons.length > 0) {
+    console.log(`✅ Found ${createImageButtons.length} "Create image" buttons:`);
+    createImageButtons.forEach((btn, idx) => {
+      console.log(`  ${idx + 1}. Text: "${btn.textContent?.trim()}"`,
+                  `| Visible: ${btn.offsetParent !== null}`);
+    });
+  } else {
+    console.log('❌ No "Create image" buttons found in current interface');
+  }
   
   // 5. Instructions
   console.log('\n📚 Instructions:');
-  console.log('1. If no image tools found, click the sparkle button (tools menu)');
-  console.log('2. Enable "Create image" from the tools list');
-  console.log('3. Then try: window.chatGPTImageGenerator.generateImage("test prompt")');
+  
+  if (toolsButton) {
+    console.log(`1. Click the tools menu button: document.querySelector('#${toolsButton.id}').click()`);
+    console.log('2. Look for "Create image" or "DALL-E" in the menu that appears');
+    console.log('3. Enable it by clicking on it');
+    console.log('4. Then try: window.chatGPTImageGenerator.generateImage("test prompt")');
+  } else {
+    console.log('1. Look for a button with a sparkle icon (✨) or menu icon');
+    console.log('2. Click it to open the tools menu');
+    console.log('3. Enable "Create image" from the tools list');
+    console.log('4. Then try: window.chatGPTImageGenerator.generateImage("test prompt")');
+  }
+  
+  console.log('\n💁 Quick test: Try typing "/imagine" in the input field');
   console.log('\n===============================\n');
 }
 
