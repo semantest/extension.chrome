@@ -1,734 +1,422 @@
-// Background Service Worker for ChatGPT Chrome Extension
-// Handles extension lifecycle, tab management, and communication
+/**
+ * Semantest Extension Service Worker
+ * Simplified version for Chrome Extension Manifest V3
+ */
 
-class BackgroundServiceWorker {
-  constructor() {
-    this.chatGPTTabs = new Map();
-    this.commandQueue = new Map();
-    this.extensionState = {
-      isActive: true,
-      activeTab: null,
-      lastCommand: null,
-      errors: []
+console.log('🚀 Semantest Service Worker starting...');
+
+// Global state
+const extensionState = {
+  isActive: true,
+  errors: [],
+  wsConnected: false,
+  messages: []
+};
+
+// Simple message storage (in-memory for service worker)
+const messageLogger = {
+  messages: [],
+  maxMessages: 100,
+  
+  addMessage(message, direction = 'incoming') {
+    const entry = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      direction,
+      type: message.type || 'unknown',
+      payload: message.payload || message,
+      raw: JSON.stringify(message)
     };
     
-    this.init();
-  }
-
-  init() {
-    
-    // Set up event listeners
-    this.setupInstallationHandlers();
-    this.setupTabHandlers();
-    this.setupMessageHandlers();
-    this.setupContextMenus();
-    this.setupCommandHandlers();
-    
-  }
-
-  setupInstallationHandlers() {
-    // Extension installation
-    chrome.runtime.onInstalled.addListener((details) => {
-      
-      if (details.reason === 'install') {
-        this.handleFirstInstall();
-      } else if (details.reason === 'update') {
-        this.handleUpdate(details.previousVersion);
-      }
-    });
-
-    // Extension startup
-    chrome.runtime.onStartup.addListener(async () => {
-      this.refreshChatGPTTabs();
-      
-      // SAFETY CHECK 4: Check if consent is still pending from previous session
-      const stored = await chrome.storage.sync.get(['telemetryConsent', 'telemetryConsentPending']);
-      if (stored.telemetryConsentPending && stored.telemetryConsent === undefined) {
-        // Restart consent check process
-        this.ensureConsentShown();
-      }
-    });
-  }
-
-  async handleFirstInstall() {
-    
-    // Set default settings
-    await chrome.storage.sync.set({
-      autoDetectChatGPT: true,
-      enableNotifications: true,
-      defaultCustomInstructions: '',
-      autoCreateProjects: false
-    });
-
-    // SAFETY CHECK 1: Mark that consent needs to be shown
-    await chrome.storage.sync.set({
-      telemetryConsentPending: true,
-      installTime: Date.now()
-    });
-
-    // Open ChatGPT tab
-    const tab = await chrome.tabs.create({
-      url: 'https://chat.openai.com/',
-      active: true
-    });
-
-    // SAFETY CHECK 2: Multiple trigger attempts with increasing delays
-    const showConsentWithRetries = async (attempts = 0) => {
-      // Check if consent already given (in case of race condition)
-      const stored = await chrome.storage.sync.get(['telemetryConsent', 'telemetryConsentPending']);
-      if (stored.telemetryConsent !== undefined || !stored.telemetryConsentPending) {
-        return; // Already handled
-      }
-
-      try {
-        // First try Chrome notification
-        await this.showTelemetryConsent({
-          title: 'Welcome to ChatGPT Extension!',
-          message: 'Help us improve by allowing anonymous error reports? You can change this anytime in settings.'
-        });
-        
-        // Mark as shown
-        await chrome.storage.sync.set({ telemetryConsentPending: false });
-      } catch (error) {
-        // Fallback: Send message to content script
-        try {
-          await chrome.tabs.sendMessage(tab.id, {
-            action: 'SHOW_TELEMETRY_CONSENT_MODAL'
-          });
-          
-          // Mark as shown
-          await chrome.storage.sync.set({ telemetryConsentPending: false });
-        } catch (e) {
-          // Retry with exponential backoff (max 5 attempts)
-          if (attempts < 5) {
-            const delay = Math.min(2000 * Math.pow(2, attempts), 10000);
-            setTimeout(() => showConsentWithRetries(attempts + 1), delay);
-          }
-        }
-      }
-    };
-
-    // Initial attempt after 3 seconds
-    setTimeout(() => showConsentWithRetries(0), 3000);
-
-    // SAFETY CHECK 3: Background timer to ensure consent is shown
-    this.ensureConsentShown();
-  }
-
-  async handleUpdate(previousVersion) {
-    
-    // Handle version-specific migrations
-    if (previousVersion && this.needsMigration(previousVersion)) {
-      await this.migrateuserData(previousVersion);
-    }
-  }
-
-  needsMigration(version) {
-    // Check if data migration is needed
-    return false; // Implement version checking logic
-  }
-
-  setupTabHandlers() {
-    // Tab updates (URL changes, page loads)
-    chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-      if (changeInfo.status === 'complete' && tab.url) {
-        await this.handleTabUpdate(tabId, tab);
-      }
-    });
-
-    // Tab activation
-    chrome.tabs.onActivated.addListener(async (activeInfo) => {
-      await this.handleTabActivation(activeInfo.tabId);
-    });
-
-    // Tab removal
-    chrome.tabs.onRemoved.addListener((tabId) => {
-      this.handleTabRemoval(tabId);
-    });
-  }
-
-  async handleTabUpdate(tabId, tab) {
-    if (this.isChatGPTUrl(tab.url)) {
-      
-      // Register ChatGPT tab
-      this.chatGPTTabs.set(tabId, {
-        id: tabId,
-        url: tab.url,
-        title: tab.title,
-        lastUpdated: Date.now(),
-        controllerReady: false
-      });
-
-      // Inject content script if needed
-      await this.ensureContentScriptInjected(tabId);
-      
-      // Update extension state
-      this.extensionState.activeTab = tabId;
-    }
-  }
-
-  async handleTabActivation(tabId) {
-    const tab = await chrome.tabs.get(tabId).catch(() => null);
-    if (tab && this.isChatGPTUrl(tab.url)) {
-      this.extensionState.activeTab = tabId;
-    }
-  }
-
-  handleTabRemoval(tabId) {
-    if (this.chatGPTTabs.has(tabId)) {
-      this.chatGPTTabs.delete(tabId);
-      
-      if (this.extensionState.activeTab === tabId) {
-        this.extensionState.activeTab = null;
-      }
-    }
-  }
-
-  isChatGPTUrl(url) {
-    return url && (
-      url.includes('chat.openai.com') ||
-      url.includes('chatgpt.com')
-    );
-  }
-
-  async ensureContentScriptInjected(tabId) {
-    try {
-      // Check if content script is already injected
-      const response = await chrome.tabs.sendMessage(tabId, {
-        action: 'GET_STATUS'
-      }).catch(() => null);
-
-      if (!response) {
-        // Inject content script
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          files: ['src/content/chatgpt-controller.js']
-        });
-        
-      }
-    } catch (error) {
-    }
-  }
-
-  setupMessageHandlers() {
-    // Messages from content scripts
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      
-      // Handle async responses
-      (async () => {
-        try {
-          let response;
-          
-          switch (request.action) {
-            case 'CONTROLLER_READY':
-              response = await this.handleControllerReady(sender.tab.id);
-              break;
-              
-            case 'CONTROLLER_ERROR':
-              response = await this.handleControllerError(sender.tab.id, request.error);
-              break;
-              
-            case 'EXECUTE_COMMAND':
-              response = await this.executeCommand(request.command, request.data, sender.tab.id);
-              break;
-              
-            case 'GET_EXTENSION_STATE':
-              response = this.getExtensionState();
-              break;
-              
-            case 'SET_SETTINGS':
-              response = await this.updateSettings(request.settings);
-              break;
-              
-            case 'DOWNLOAD_IMAGE':
-              response = await this.downloadImage(request.data.url, request.data.filename);
-              break;
-              
-            case 'SEND_TELEMETRY':
-              response = await this.sendTelemetryData(request.data);
-              break;
-              
-            case 'SHOW_TELEMETRY_CONSENT':
-              response = await this.showTelemetryConsent(request.data);
-              break;
-              
-            default:
-              response = { success: false, error: 'Unknown action' };
-          }
-          
-          sendResponse(response);
-        } catch (error) {
-          sendResponse({ success: false, error: error.message });
-        }
-      })();
-      
-      return true; // Keep message channel open
-    });
-
-    // Messages from popup
-    chrome.runtime.onConnect.addListener((port) => {
-      if (port.name === 'popup') {
-        this.setupPopupConnection(port);
-      }
-    });
-  }
-
-  async handleControllerReady(tabId) {
-    
-    const tabInfo = this.chatGPTTabs.get(tabId);
-    if (tabInfo) {
-      tabInfo.controllerReady = true;
-      this.chatGPTTabs.set(tabId, tabInfo);
+    this.messages.push(entry);
+    if (this.messages.length > this.maxMessages) {
+      this.messages = this.messages.slice(-this.maxMessages);
     }
     
-    return { success: true };
-  }
-
-  async handleControllerError(tabId, error) {
-    
-    this.extensionState.errors.push({
-      tabId,
-      error,
-      timestamp: Date.now()
+    // Notify popup if connected
+    chrome.runtime.sendMessage({
+      type: 'message-update',
+      event: 'message-added',
+      data: entry
+    }).catch(() => {
+      // Ignore if no listeners
     });
     
-    return { success: true };
-  }
-
-  setupPopupConnection(port) {
+    return entry;
+  },
+  
+  getMessages(filter = {}, limit = 50) {
+    let filtered = [...this.messages];
     
-    port.onMessage.addListener(async (message) => {
-      try {
-        let response;
-        
-        switch (message.action) {
-          case 'GET_CHATGPT_TABS':
-            response = await this.getChatGPTTabs();
-            break;
-            
-          case 'EXECUTE_CHATGPT_COMMAND':
-            response = await this.executeChatGPTCommand(
-              message.command,
-              message.data,
-              message.tabId
-            );
-            break;
-            
-          case 'GET_SETTINGS':
-            response = await this.getSettings();
-            break;
-            
-          case 'UPDATE_SETTINGS':
-            response = await this.updateSettings(message.settings);
-            break;
-            
-          default:
-            response = { success: false, error: 'Unknown popup action' };
-        }
-        
-        port.postMessage(response);
-      } catch (error) {
-        port.postMessage({ success: false, error: error.message });
-      }
-    });
-
-    port.onDisconnect.addListener(() => {
-    });
-  }
-
-  setupContextMenus() {
-    // Create context menu items
-    chrome.contextMenus.create({
-      id: 'chatgpt-create-project',
-      title: 'Create ChatGPT Project',
-      contexts: ['page'],
-      documentUrlPatterns: ['*://chat.openai.com/*', '*://chatgpt.com/*']
-    });
-
-    chrome.contextMenus.create({
-      id: 'chatgpt-new-chat',
-      title: 'New Chat',
-      contexts: ['page'],
-      documentUrlPatterns: ['*://chat.openai.com/*', '*://chatgpt.com/*']
-    });
-
-    chrome.contextMenus.create({
-      id: 'chatgpt-send-prompt',
-      title: 'Send Custom Prompt',
-      contexts: ['selection'],
-      documentUrlPatterns: ['*://chat.openai.com/*', '*://chatgpt.com/*']
-    });
-
-    // Context menu click handler
-    chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-      await this.handleContextMenuClick(info, tab);
-    });
-  }
-
-  async handleContextMenuClick(info, tab) {
-    
-    switch (info.menuItemId) {
-      case 'chatgpt-create-project':
-        await this.promptForProjectCreation(tab.id);
-        break;
-        
-      case 'chatgpt-new-chat':
-        await this.executeChatGPTCommand('CREATE_NEW_CHAT', {}, tab.id);
-        break;
-        
-      case 'chatgpt-send-prompt':
-        if (info.selectionText) {
-          await this.executeChatGPTCommand('SEND_PROMPT', {
-            text: info.selectionText
-          }, tab.id);
-        }
-        break;
-    }
-  }
-
-  setupCommandHandlers() {
-    // Keyboard shortcuts
-    chrome.commands.onCommand.addListener(async (command) => {
-      
-      const activeTab = await this.getActiveChatGPTTab();
-      if (!activeTab) {
-        return;
-      }
-      
-      switch (command) {
-        case 'new-chat':
-          await this.executeChatGPTCommand('CREATE_NEW_CHAT', {}, activeTab.id);
-          break;
-          
-        case 'create-project':
-          await this.promptForProjectCreation(activeTab.id);
-          break;
-      }
-    });
-  }
-
-  // Command Execution Methods
-  async executeChatGPTCommand(command, data = {}, tabId = null) {
-    const targetTabId = tabId || this.extensionState.activeTab;
-    
-    if (!targetTabId) {
-      throw new Error('No ChatGPT tab available');
-    }
-
-    const tabInfo = this.chatGPTTabs.get(targetTabId);
-    if (!tabInfo || !tabInfo.controllerReady) {
-      throw new Error('ChatGPT controller not ready');
-    }
-
-
-    try {
-      const response = await chrome.tabs.sendMessage(targetTabId, {
-        action: command,
-        data
-      });
-
-      this.extensionState.lastCommand = {
-        command,
-        data,
-        tabId: targetTabId,
-        timestamp: Date.now(),
-        success: response.success
-      };
-
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async promptForProjectCreation(tabId) {
-    // This would typically show a prompt dialog
-    // For now, use a default name
-    const projectName = `Project ${Date.now()}`;
-    
-    return await this.executeChatGPTCommand('CREATE_PROJECT', {
-      name: projectName
-    }, tabId);
-  }
-
-  // State Management
-  async getChatGPTTabs() {
-    const tabs = Array.from(this.chatGPTTabs.values());
-    return { success: true, tabs };
-  }
-
-  async getActiveChatGPTTab() {
-    if (this.extensionState.activeTab) {
-      return this.chatGPTTabs.get(this.extensionState.activeTab);
+    if (filter.type) {
+      filtered = filtered.filter(msg => msg.type.includes(filter.type));
     }
     
-    // Fallback: find any ChatGPT tab
-    const tabs = Array.from(this.chatGPTTabs.values());
-    return tabs.length > 0 ? tabs[0] : null;
-  }
-
-  getExtensionState() {
+    if (filter.direction) {
+      filtered = filtered.filter(msg => msg.direction === filter.direction);
+    }
+    
+    return filtered.slice(-limit);
+  },
+  
+  clear() {
+    this.messages = [];
+    chrome.runtime.sendMessage({
+      type: 'message-update',
+      event: 'messages-cleared'
+    }).catch(() => {});
+  },
+  
+  getStats() {
     return {
-      success: true,
-      state: {
-        ...this.extensionState,
-        chatGPTTabsCount: this.chatGPTTabs.size,
-        activeChatGPTTab: this.chatGPTTabs.get(this.extensionState.activeTab)
-      }
+      total: this.messages.length,
+      incoming: this.messages.filter(m => m.direction === 'incoming').length,
+      outgoing: this.messages.filter(m => m.direction === 'outgoing').length,
+      byType: this.messages.reduce((acc, msg) => {
+        acc[msg.type] = (acc[msg.type] || 0) + 1;
+        return acc;
+      }, {})
     };
   }
+};
 
-  async refreshChatGPTTabs() {
-    // Clear existing tabs
-    this.chatGPTTabs.clear();
-    
-    // Find all ChatGPT tabs
-    const tabs = await chrome.tabs.query({});
-    
-    for (const tab of tabs) {
-      if (this.isChatGPTUrl(tab.url)) {
-        await this.handleTabUpdate(tab.id, tab);
-      }
-    }
-    
+// WebSocket handler
+class WebSocketHandler {
+  constructor() {
+    this.ws = null;
+    this.serverUrl = 'ws://localhost:3004';
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectDelay = 1000;
   }
 
-  // Settings Management
-  async getSettings() {
-    const settings = await chrome.storage.sync.get([
-      'autoDetectChatGPT',
-      'enableNotifications',
-      'defaultCustomInstructions',
-      'autoCreateProjects'
-    ]);
-    
-    return { success: true, settings };
-  }
-
-  async updateSettings(newSettings) {
-    await chrome.storage.sync.set(newSettings);
-    
-    return { success: true };
-  }
-
-  // Notification Methods
-  async showNotification(title, message, type = 'basic') {
-    const settings = await this.getSettings();
-    if (!settings.settings.enableNotifications) {
+  connect() {
+    if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+      console.log('WebSocket already connected');
       return;
     }
 
-    chrome.notifications.create({
-      type,
-      iconUrl: 'assets/icon-48.png',
-      title,
-      message
-    });
-  }
-
-  // Image Download Method
-  async downloadImage(url, filename) {
-    try {
-      
-      // Use Chrome downloads API
-      const downloadId = await chrome.downloads.download({
-        url,
-        filename: `ChatGPT_Images/${filename}`,
-        saveAs: false,
-        conflictAction: 'uniquify'
-      });
-      
-      // Wait for download to complete
-      return new Promise((resolve) => {
-        const checkDownload = (delta) => {
-          if (delta.id === downloadId) {
-            if (delta.state && delta.state.current === 'complete') {
-              chrome.downloads.onChanged.removeListener(checkDownload);
-              resolve({ success: true, downloadId });
-            } else if (delta.state && delta.state.current === 'interrupted') {
-              chrome.downloads.onChanged.removeListener(checkDownload);
-              resolve({ success: false, error: 'Download interrupted' });
-            }
-          }
-        };
-        
-        chrome.downloads.onChanged.addListener(checkDownload);
-        
-        // Timeout after 30 seconds
-        setTimeout(() => {
-          chrome.downloads.onChanged.removeListener(checkDownload);
-          resolve({ success: false, error: 'Download timeout' });
-        }, 30000);
-      });
-      
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Error Handling
-  handleError(error, context = '') {
+    console.log(`Connecting to ${this.serverUrl}...`);
     
-    this.extensionState.errors.push({
-      error: error.message || error,
-      context,
-      timestamp: Date.now()
-    });
-
-    // Show notification for critical errors
-    if (context.includes('critical')) {
-      this.showNotification(
-        'ChatGPT Extension Error',
-        error.message || 'An unexpected error occurred'
-      );
-    }
-  }
-
-  // Telemetry Methods
-  async sendTelemetryData(payload) {
     try {
-      // Check if telemetry is enabled
-      const settings = await chrome.storage.sync.get(['telemetryConsent']);
-      if (!settings.telemetryConsent) {
-        return { success: false, error: 'Telemetry disabled' };
-      }
+      this.ws = new WebSocket(this.serverUrl);
 
-      const response = await fetch('https://api.semantest.com/v1/telemetry/errors', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'ChatGPT-Extension/' + chrome.runtime.getManifest().version
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        return { success: true };
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-    } catch (error) {
-      // Silent fail for telemetry
-      return { success: false, error: error.message };
-    }
-  }
-
-  async showTelemetryConsent(data) {
-    try {
-      // Create notification to request consent
-      const notificationId = await chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'assets/icon48.png',
-        title: data.title || 'ChatGPT Extension',
-        message: data.message || 'Help improve the extension by sending anonymous error reports?',
-        buttons: [
-          { title: 'No Thanks' },
-          { title: 'Allow' }
-        ]
-      });
-
-      return new Promise((resolve) => {
-        const handleClick = (clickedId, buttonIndex) => {
-          if (clickedId === notificationId) {
-            const consent = buttonIndex === 1; // Second button is "Allow"
-            chrome.storage.sync.set({ telemetryConsent: consent });
-            chrome.notifications.onButtonClicked.removeListener(handleClick);
-            chrome.notifications.clear(notificationId);
-            resolve({ success: true, consent });
+      this.ws.onopen = () => {
+        console.log('✅ WebSocket connected');
+        extensionState.wsConnected = true;
+        this.reconnectAttempts = 0;
+        
+        // Send registration
+        this.send({
+          type: 'semantest/extension/registered',
+          data: {
+            extensionId: chrome.runtime.id,
+            version: chrome.runtime.getManifest().version
           }
-        };
-
-        chrome.notifications.onButtonClicked.addListener(handleClick);
-
-        // Timeout after 30 seconds
-        setTimeout(() => {
-          chrome.notifications.onButtonClicked.removeListener(handleClick);
-          chrome.notifications.clear(notificationId);
-          resolve({ success: true, consent: false });
-        }, 30000);
-      });
-    } catch (error) {
-      // Fallback: Try content script modal if notification fails
-      await this.showConsentInContentScript();
-      return { success: false, error: error.message };
-    }
-  }
-
-  async showConsentInContentScript() {
-    try {
-      // Find an active ChatGPT tab
-      const activeTabs = await chrome.tabs.query({
-        url: ['*://chat.openai.com/*', '*://chatgpt.com/*'],
-        active: true
-      });
-
-      if (activeTabs.length > 0) {
-        // Send message to content script to show modal
-        const response = await chrome.tabs.sendMessage(activeTabs[0].id, {
-          action: 'SHOW_TELEMETRY_CONSENT_MODAL'
         });
-        return response;
-      }
-    } catch (error) {
-      // Silent fail for fallback
-    }
-  }
+        
+        // Subscribe to events
+        this.ws.send(JSON.stringify({
+          id: `sub-${Date.now()}`,
+          type: 'subscribe',
+          timestamp: Date.now(),
+          payload: {
+            eventTypes: ['semantest/custom/image/request/received']
+          }
+        }));
+      };
 
-  // SAFETY CHECK: Ensure consent popup is shown
-  async ensureConsentShown() {
-    // Check every 30 seconds if consent is still pending
-    const checkInterval = setInterval(async () => {
-      const stored = await chrome.storage.sync.get(['telemetryConsent', 'telemetryConsentPending']);
-      
-      // If consent is pending and no decision made
-      if (stored.telemetryConsentPending && stored.telemetryConsent === undefined) {
-        // Try to show consent again
+      this.ws.onmessage = async (event) => {
         try {
-          await this.showTelemetryConsent({
-            title: 'ChatGPT Extension - Privacy Choice',
-            message: 'Would you like to help improve the extension with anonymous error reports?'
-          });
+          const message = JSON.parse(event.data);
+          console.log('📨 WebSocket message:', message);
           
-          // Mark as shown
-          await chrome.storage.sync.set({ telemetryConsentPending: false });
-          clearInterval(checkInterval);
-        } catch (error) {
-          // Try content script fallback
-          const tabs = await chrome.tabs.query({
-            url: ['*://chat.openai.com/*', '*://chatgpt.com/*']
-          });
+          // Log message
+          messageLogger.addMessage(message, 'incoming');
           
-          if (tabs.length > 0) {
-            try {
-              await chrome.tabs.sendMessage(tabs[0].id, {
-                action: 'SHOW_TELEMETRY_CONSENT_MODAL'
-              });
-              await chrome.storage.sync.set({ telemetryConsentPending: false });
-              clearInterval(checkInterval);
-            } catch (e) {
-              // Will retry in next interval
+          // Handle nested format
+          if (message.type === 'event' && message.payload) {
+            const eventType = message.payload.type;
+            const eventPayload = message.payload.payload;
+            
+            if (eventType === 'semantest/custom/image/request/received') {
+              await this.handleImageRequest(eventPayload);
             }
           }
+        } catch (error) {
+          console.error('Error parsing message:', error);
         }
-      } else {
-        // Consent already handled
-        clearInterval(checkInterval);
-      }
-    }, 30000); // Check every 30 seconds
+      };
 
-    // Stop checking after 5 minutes
-    setTimeout(() => {
-      clearInterval(checkInterval);
-    }, 300000);
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        extensionState.wsConnected = false;
+      };
+
+      this.ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        extensionState.wsConnected = false;
+        this.ws = null;
+        
+        // Auto-reconnect
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectAttempts++;
+          const delay = this.reconnectDelay * this.reconnectAttempts;
+          console.log(`Reconnecting in ${delay}ms...`);
+          setTimeout(() => this.connect(), delay);
+        }
+      };
+    } catch (error) {
+      console.error('Failed to create WebSocket:', error);
+      extensionState.wsConnected = false;
+    }
+  }
+
+  async handleImageRequest(payload) {
+    console.log('🎨 Handling image request:', payload);
+    
+    // Find ChatGPT tabs
+    const tabs = await chrome.tabs.query({
+      url: ['*://chat.openai.com/*', '*://chatgpt.com/*']
+    });
+    
+    if (tabs.length === 0) {
+      console.error('No ChatGPT tabs found');
+      return;
+    }
+    
+    const tab = tabs[0];
+    console.log(`Found ChatGPT tab: ${tab.id}`);
+    
+    // Send message to tab
+    chrome.tabs.sendMessage(tab.id, {
+      type: 'websocket:message',
+      payload: {
+        type: 'semantest/custom/image/request/received',
+        payload: payload
+      }
+    }).catch(error => {
+      console.error('Failed to send to tab:', error);
+    });
+  }
+
+  send(data) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const message = {
+        id: `msg-${Date.now()}`,
+        type: 'event',
+        timestamp: Date.now(),
+        payload: {
+          type: data.type,
+          payload: data.data || data
+        }
+      };
+      
+      this.ws.send(JSON.stringify(message));
+      messageLogger.addMessage(message, 'outgoing');
+    }
+  }
+
+  disconnect() {
+    if (this.ws) {
+      this.reconnectAttempts = this.maxReconnectAttempts;
+      this.ws.close();
+      this.ws = null;
+    }
+  }
+
+  getStatus() {
+    return {
+      connected: this.ws && this.ws.readyState === WebSocket.OPEN,
+      serverUrl: this.serverUrl,
+      reconnectAttempts: this.reconnectAttempts
+    };
   }
 }
 
-// Initialize service worker
-const backgroundWorker = new BackgroundServiceWorker();
+// Create WebSocket instance
+const wsHandler = new WebSocketHandler();
 
-// Keep service worker alive
-chrome.runtime.onMessage.addListener(() => {
-  // This listener keeps the service worker active
+// Installation handlers
+chrome.runtime.onInstalled.addListener((details) => {
+  console.log('Extension installed:', details);
+  
+  if (details.reason === 'install') {
+    chrome.storage.sync.set({
+      enableNotifications: true,
+      installTime: Date.now()
+    });
+  }
+  
+  // Start WebSocket connection
+  wsHandler.connect();
+});
+
+// Startup handler
+chrome.runtime.onStartup.addListener(() => {
+  console.log('Extension started');
+  wsHandler.connect();
+});
+
+// Message handlers
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Message received:', request.action || request.type);
+  
+  (async () => {
+    try {
+      let response;
+      
+      switch (request.action || request.type) {
+        case 'GET_MESSAGES':
+          response = {
+            success: true,
+            messages: messageLogger.getMessages(request.filter, request.limit)
+          };
+          break;
+          
+        case 'CLEAR_MESSAGES':
+          messageLogger.clear();
+          response = { success: true };
+          break;
+          
+        case 'GET_STATS':
+          response = {
+            success: true,
+            stats: messageLogger.getStats()
+          };
+          break;
+          
+        case 'WEBSOCKET_STATUS':
+          response = wsHandler.getStatus();
+          break;
+          
+        case 'WEBSOCKET_CONNECT':
+          wsHandler.connect();
+          response = { success: true };
+          break;
+          
+        case 'WEBSOCKET_DISCONNECT':
+          wsHandler.disconnect();
+          response = { success: true };
+          break;
+          
+        case 'GET_ACTIVE_ADDON':
+          // Simple addon detection based on tab URL
+          if (sender.tab && sender.tab.url) {
+            const url = new URL(sender.tab.url);
+            if (url.hostname.includes('chat.openai.com') || url.hostname.includes('chatgpt.com')) {
+              response = {
+                success: true,
+                addon: {
+                  addon_id: 'chatgpt_addon',
+                  name: 'ChatGPT Integration'
+                }
+              };
+            } else {
+              response = { success: true, addon: null };
+            }
+          } else {
+            response = { success: true, addon: null };
+          }
+          break;
+          
+        default:
+          response = { success: false, error: 'Unknown action' };
+      }
+      
+      sendResponse(response);
+    } catch (error) {
+      console.error('Error handling message:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  })();
+  
   return true;
 });
 
+// Popup connection handler
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'popup') {
+    console.log('Popup connected');
+    
+    // Send current messages
+    port.postMessage({
+      type: 'messages-loaded',
+      messages: messageLogger.getMessages()
+    });
+    
+    port.onMessage.addListener(async (message) => {
+      let response;
+      
+      switch (message.action) {
+        case 'GET_MESSAGES':
+          response = {
+            success: true,
+            messages: messageLogger.getMessages(message.filter, message.limit)
+          };
+          break;
+          
+        case 'GET_STATS':
+          response = {
+            success: true,
+            stats: messageLogger.getStats()
+          };
+          break;
+          
+        default:
+          response = { success: false, error: 'Unknown action' };
+      }
+      
+      port.postMessage(response);
+    });
+  }
+});
+
+// Tab update handler - inject addon when ChatGPT loads
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url) {
+    const url = new URL(tab.url);
+    
+    if (url.hostname.includes('chat.openai.com') || url.hostname.includes('chatgpt.com')) {
+      console.log('ChatGPT tab loaded, injecting addon...');
+      
+      try {
+        // First inject the bridge as a content script
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['src/content/chatgpt-bridge.js']
+        });
+        
+        // Then inject addon files into MAIN world
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: [
+            'src/addons/chatgpt/state-detector.js',
+            'src/addons/chatgpt/controller.js',
+            'src/addons/chatgpt/button-clicker.js',
+            'src/addons/chatgpt/direct-send.js',
+            'src/addons/chatgpt/image-generator.js',
+            'src/addons/chatgpt/debug-tools.js',
+            'src/addons/chatgpt/index.js'
+          ],
+          world: 'MAIN'
+        });
+        
+        console.log('✅ ChatGPT addon and bridge injected');
+      } catch (error) {
+        console.error('Failed to inject addon:', error);
+      }
+    }
+  }
+});
+
+// Keep service worker alive
+self.addEventListener('activate', event => {
+  console.log('Service worker activated');
+  event.waitUntil(clients.claim());
+});
+
+// Start WebSocket connection
+wsHandler.connect();
+
+console.log('✅ Semantest Service Worker ready');

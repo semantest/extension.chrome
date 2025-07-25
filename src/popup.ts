@@ -1,6 +1,8 @@
 // Web-Buddy Extension Popup Script
 // Provides UI for connection management and status monitoring
 
+import { TabHealthCheck } from './health-checks/tab-health';
+
 interface ConnectionStatus {
   connected: boolean;
   connecting: boolean;
@@ -8,6 +10,14 @@ interface ConnectionStatus {
   extensionId: string;
   lastMessage: string;
   lastError: string;
+}
+
+interface HealthStatus {
+  component: 'server' | 'extension' | 'addon';
+  healthy: boolean;
+  message?: string;
+  action?: string;
+  childHealth?: HealthStatus;
 }
 
 class PopupController {
@@ -20,6 +30,11 @@ class PopupController {
   private lastMessageElement: HTMLElement;
   private logPanel: HTMLElement;
   
+  // Health check elements
+  private healthStatusDot: HTMLElement;
+  private healthStatusText: HTMLElement;
+  private tabHealthCheck: TabHealthCheck;
+  
   private status: ConnectionStatus = {
     connected: false,
     connecting: false,
@@ -28,12 +43,16 @@ class PopupController {
     lastMessage: 'None',
     lastError: ''
   };
+  
+  private healthStatus: HealthStatus | null = null;
 
   constructor() {
+    this.tabHealthCheck = new TabHealthCheck();
     this.initializeElements();
     this.bindEvents();
     this.loadInitialData();
     this.startStatusPolling();
+    this.startHealthCheckPolling();
   }
 
   private initializeElements(): void {
@@ -45,6 +64,10 @@ class PopupController {
     this.currentTabElement = document.getElementById('currentTab') as HTMLElement;
     this.lastMessageElement = document.getElementById('lastMessage') as HTMLElement;
     this.logPanel = document.getElementById('logPanel') as HTMLElement;
+    
+    // Health check elements
+    this.healthStatusDot = document.getElementById('healthStatusDot') as HTMLElement;
+    this.healthStatusText = document.getElementById('healthStatusText') as HTMLElement;
   }
 
   private bindEvents(): void {
@@ -209,6 +232,94 @@ class PopupController {
     setInterval(() => {
       this.requestStatusFromBackground();
     }, 2000);
+  }
+  
+  private startHealthCheckPolling(): void {
+    // Check health immediately
+    this.checkHealth();
+    
+    // Poll health status every 5 seconds
+    setInterval(() => {
+      this.checkHealth();
+    }, 5000);
+  }
+  
+  private async checkHealth(): Promise<void> {
+    try {
+      // First check server health
+      const serverHealthy = await this.checkServerHealth();
+      
+      if (!serverHealthy) {
+        this.updateHealthStatus({
+          component: 'server',
+          healthy: false,
+          message: 'Server unavailable',
+          action: 'Start the server at localhost:3003'
+        });
+        return;
+      }
+      
+      // Then check tab health
+      const tabHealth = await this.tabHealthCheck.getHealthStatus();
+      this.updateHealthStatus(tabHealth);
+      
+    } catch (error) {
+      this.updateHealthStatus({
+        component: 'extension',
+        healthy: false,
+        message: `Health check failed: ${error}`,
+        action: 'Check extension permissions'
+      });
+    }
+  }
+  
+  private async checkServerHealth(): Promise<boolean> {
+    try {
+      const response = await fetch('http://localhost:3003/health');
+      if (response.ok) {
+        const health = await response.json();
+        return health.healthy === true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+  
+  private updateHealthStatus(status: HealthStatus): void {
+    this.healthStatus = status;
+    
+    // Update UI
+    this.healthStatusDot.classList.remove('active', 'inactive', 'warning');
+    
+    if (status.healthy) {
+      this.healthStatusDot.classList.add('active');
+      this.healthStatusText.textContent = 'All systems healthy';
+    } else {
+      this.healthStatusDot.classList.add('inactive');
+      this.healthStatusText.textContent = status.message || 'Health check failed';
+    }
+    
+    // Log health status changes
+    if (!status.healthy) {
+      this.addLog('error', `Health: ${status.message} - ${status.action || 'No action available'}`);
+    }
+    
+    // Handle automatic tab creation if needed
+    if (status.component === 'extension' && !status.healthy && status.message?.includes('No ChatGPT tab')) {
+      this.handleCreateChatGPTTab();
+    }
+  }
+  
+  private async handleCreateChatGPTTab(): Promise<void> {
+    try {
+      const tab = await this.tabHealthCheck.ensureChatGPTTab();
+      this.addLog('success', `Created ChatGPT tab (ID: ${tab.id})`);
+      // Re-check health after creating tab
+      setTimeout(() => this.checkHealth(), 1000);
+    } catch (error) {
+      this.addLog('error', `Failed to create ChatGPT tab: ${error}`);
+    }
   }
 }
 

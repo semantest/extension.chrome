@@ -1,40 +1,42 @@
 {
   "manifest_version": 3,
   "name": "Semantest",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "AI-powered web automation extension built on Semantest framework for ChatGPT and language model integration",
   "background": {
-    "service_worker": "build/semantest-background.js"
+    "service_worker": "src/background/service-worker.js"
   },
-  "content_scripts": [
-    {
-      "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"],
-      "js": ["src/telemetry/error-reporter.js", "src/content/chatgpt-controller.js"]
-    }
-  ],
+  "content_scripts": [],
   "web_accessible_resources": [
     {
-      "resources": ["src/telemetry/*.js"],
-      "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"]
+      "resources": [
+        "src/core/*.js",
+        "src/content/*.js",
+        "src/addons/*/*.js",
+        "src/addons/*/manifest.json"
+      ],
+      "matches": ["<all_urls>"]
     }
   ],
   "action": {
-    "default_popup": "src/popup.html",
+    "default_popup": "src/popup/popup.html",
     "default_title": "Semantest: AI Automation"
   },
   "permissions": [
     "activeTab",
+    "tabs",
     "scripting",
     "storage",
     "downloads",
-    "notifications"
+    "notifications",
+    "contextMenus"
   ],
   "host_permissions": [
     "https://chat.openai.com/*",
     "https://chatgpt.com/*"
   ],
   "content_security_policy": {
-    "extension_pages": "default-src 'self'; script-src 'self'; object-src 'none';"
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; connect-src 'self' http://localhost:* ws://localhost:*;"
   },
   "icons": {
     "16": "assets/icon16.png",

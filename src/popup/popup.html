@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semantest Message Logs</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h1>Semantest</h1>
+      <div class="connection-status">
+        <span class="status-indicator" id="ws-status"></span>
+        <span class="status-text" id="ws-status-text">Disconnected</span>
+      </div>
+    </header>
+
+    <div class="filter-section">
+      <div class="filter-group">
+        <label for="filter-type">Type:</label>
+        <select id="filter-type">
+          <option value="">All Types</option>
+          <option value="websocket">WebSocket</option>
+          <option value="addon">Addon</option>
+          <option value="core">Core</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-direction">Direction:</label>
+        <select id="filter-direction">
+          <option value="">All</option>
+          <option value="incoming">Incoming</option>
+          <option value="outgoing">Outgoing</option>
+          <option value="internal">Internal</option>
+        </select>
+      </div>
+      <button id="clear-messages" class="btn-secondary">Clear</button>
+    </div>
+
+    <div class="message-stats">
+      <div class="stat">
+        <span class="stat-label">Total:</span>
+        <span class="stat-value" id="stat-total">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Incoming:</span>
+        <span class="stat-value" id="stat-incoming">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Outgoing:</span>
+        <span class="stat-value" id="stat-outgoing">0</span>
+      </div>
+    </div>
+
+    <div class="messages-container" id="messages-container">
+      <div class="empty-state">
+        <p>No messages yet</p>
+        <p class="empty-state-hint">Messages will appear here when events occur</p>
+      </div>
+    </div>
+
+    <div class="addon-info" id="addon-info">
+      <h3>Active Addon</h3>
+      <p id="addon-name">None</p>
+    </div>
+
+    <footer class="popup-footer">
+      <button id="open-settings" class="btn-icon" title="Settings">⚙️</button>
+      <button id="reconnect-ws" class="btn-primary">Reconnect</button>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,363 +1,272 @@
-// Semantest Extension Popup Script
-// Manages project selection, custom instructions, and ChatGPT integration
-
-class SemantestPopup {
-  constructor() {
-    this.currentProject = null;
-    this.projects = [];
-    this.theme = 'light';
-    this.initializeElements();
-    this.bindEvents();
-    this.loadData();
-  }
-
-  initializeElements() {
-    // Header elements
-    this.themeToggle = document.getElementById('theme-toggle');
-    this.sunIcon = document.getElementById('sun-icon');
-    this.moonIcon = document.getElementById('moon-icon');
-    
-    // Project elements
-    this.projectDropdown = document.getElementById('project-select');
-    this.projectName = document.getElementById('project-name');
-    this.projectColor = document.getElementById('project-color');
-    this.projectDropdownIcon = document.getElementById('dropdown-icon');
-    
-    // Custom instructions
-    this.instructionsTextarea = document.getElementById('custom-instructions');
-    this.charCount = document.getElementById('char-count');
-    this.charCountCurrent = document.getElementById('char-count-current');
-    
-    // Quick prompt
-    this.promptInput = document.getElementById('quick-prompt');
-    
-    // Action buttons
-    this.newChatBtn = document.getElementById('new-chat-btn');
-    this.continueBtn = document.getElementById('continue-btn');
-    this.historyBtn = document.getElementById('history-btn');
-    
-    // Status bar
-    this.statusIndicator = document.getElementById('status-indicator');
-    this.statusText = document.getElementById('status-text');
-    this.chatCount = document.getElementById('chat-count');
-    
-    // Project management modal
-    this.projectModal = document.getElementById('project-modal');
-    this.newProjectBtn = document.getElementById('new-project-btn');
-    this.projectModalClose = document.getElementById('project-modal-close');
-    this.projectNameInput = document.getElementById('project-name-input');
-    this.colorOptions = document.querySelectorAll('.color-option');
-    this.saveProjectBtn = document.getElementById('save-project-btn');
-    this.cancelProjectBtn = document.getElementById('cancel-project-btn');
-  }
-
-  bindEvents() {
-    // Theme toggle
-    this.themeToggle.addEventListener('click', () => this.toggleTheme());
-    
-    // Project dropdown
-    this.projectDropdown.addEventListener('click', () => this.toggleProjectMenu());
-    
-    // Custom instructions
-    this.instructionsTextarea.addEventListener('input', () => this.updateCharCount());
-    this.instructionsTextarea.addEventListener('change', () => this.saveInstructions());
-    
-    // Action buttons
-    this.newChatBtn.addEventListener('click', () => this.createNewChat());
-    this.continueBtn.addEventListener('click', () => this.continueChat());
-    this.historyBtn.addEventListener('click', () => this.showHistory());
-    
-    // Quick prompt enter key
-    this.promptInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        this.sendQuickPrompt();
-      }
-    });
-    
-    // Project modal
-    if (this.newProjectBtn) {
-      this.newProjectBtn.addEventListener('click', () => this.showProjectModal());
+// Web-Buddy Extension Popup Script
+// Provides UI for connection management and status monitoring
+import { TabHealthCheck } from './health-checks/tab-health';
+class PopupController {
+    constructor() {
+        this.status = {
+            connected: false,
+            connecting: false,
+            serverUrl: 'ws://localhost:3003/ws',
+            extensionId: '',
+            lastMessage: 'None',
+            lastError: ''
+        };
+        this.healthStatus = null;
+        this.tabHealthCheck = new TabHealthCheck();
+        this.initializeElements();
+        this.bindEvents();
+        this.loadInitialData();
+        this.startStatusPolling();
+        this.startHealthCheckPolling();
     }
-    if (this.projectModalClose) {
-      this.projectModalClose.addEventListener('click', () => this.hideProjectModal());
+    initializeElements() {
+        this.toggleButton = document.getElementById('toggleButton');
+        this.statusDot = document.getElementById('statusDot');
+        this.statusText = document.getElementById('statusText');
+        this.serverInput = document.getElementById('serverInput');
+        this.extensionIdElement = document.getElementById('extensionId');
+        this.currentTabElement = document.getElementById('currentTab');
+        this.lastMessageElement = document.getElementById('lastMessage');
+        this.logPanel = document.getElementById('logPanel');
+        // Health check elements
+        this.healthStatusDot = document.getElementById('healthStatusDot');
+        this.healthStatusText = document.getElementById('healthStatusText');
     }
-    if (this.saveProjectBtn) {
-      this.saveProjectBtn.addEventListener('click', () => this.saveNewProject());
+    bindEvents() {
+        this.toggleButton.addEventListener('click', () => this.handleToggleConnection());
+        this.serverInput.addEventListener('change', () => this.handleServerUrlChange());
+        this.serverInput.addEventListener('input', () => this.handleServerUrlChange());
     }
-    if (this.cancelProjectBtn) {
-      this.cancelProjectBtn.addEventListener('click', () => this.hideProjectModal());
+    async loadInitialData() {
+        try {
+            // Get extension ID
+            this.status.extensionId = chrome.runtime.id;
+            this.extensionIdElement.textContent = this.status.extensionId;
+            // Get current tab info
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tab) {
+                this.currentTabElement.textContent = `${tab.title?.substring(0, 30)}... (${tab.id})`;
+            }
+            // Load saved server URL
+            const result = await chrome.storage.local.get(['serverUrl']);
+            if (result.serverUrl) {
+                this.status.serverUrl = result.serverUrl;
+                this.serverInput.value = result.serverUrl;
+            }
+            // Get initial connection status from background script
+            this.requestStatusFromBackground();
+        }
+        catch (error) {
+            this.addLog('error', `Failed to load initial data: ${error}`);
+        }
     }
-    
-    // Color options
-    this.colorOptions.forEach(option => {
-      option.addEventListener('click', () => this.selectColor(option));
-    });
-    
-    // Listen for storage changes
-    chrome.storage.onChanged.addListener((changes, namespace) => {
-      if (namespace === 'sync' && changes.projects) {
-        this.projects = changes.projects.newValue || [];
-        this.updateProjectUI();
-      }
-    });
-  }
-
-  async loadData() {
-    try {
-      // Load saved data
-      const data = await chrome.storage.sync.get([
-        'projects',
-        'currentProjectId',
-        'theme',
-        'customInstructions'
-      ]);
-      
-      this.projects = data.projects || this.getDefaultProjects();
-      this.theme = data.theme || 'light';
-      
-      // Set theme
-      document.documentElement.setAttribute('data-theme', this.theme);
-      this.updateThemeIcon();
-      
-      // Load current project
-      if (data.currentProjectId) {
-        this.currentProject = this.projects.find(p => p.id === data.currentProjectId);
-      }
-      if (!this.currentProject && this.projects.length > 0) {
-        this.currentProject = this.projects[0];
-      }
-      
-      // Update UI
-      this.updateProjectUI();
-      this.updateInstructions();
-      this.updateStatus();
-      
-      // Get today's chat count
-      const today = new Date().toDateString();
-      const chatData = await chrome.storage.local.get(['chatHistory']);
-      const todayChats = (chatData.chatHistory || [])
-        .filter(chat => new Date(chat.timestamp).toDateString() === today);
-      this.chatCount.textContent = `${todayChats.length} chats today`;
-      
-    } catch (error) {
-      console.error('Error loading data:', error);
-      this.showError('Failed to load data');
+    async handleToggleConnection() {
+        if (this.status.connecting) {
+            return; // Ignore clicks while connecting
+        }
+        try {
+            if (this.status.connected) {
+                await this.sendToBackground({ action: 'disconnect' });
+                this.addLog('info', 'Disconnection requested');
+            }
+            else {
+                await this.sendToBackground({
+                    action: 'connect',
+                    serverUrl: this.serverInput.value
+                });
+                this.addLog('info', `Connection requested to ${this.serverInput.value}`);
+            }
+        }
+        catch (error) {
+            this.addLog('error', `Toggle connection failed: ${error}`);
+        }
     }
-  }
-
-  getDefaultProjects() {
-    return [
-      { id: 'default', name: 'General', color: '#10a37f' }
-    ];
-  }
-
-  toggleTheme() {
-    this.theme = this.theme === 'light' ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', this.theme);
-    this.updateThemeIcon();
-    chrome.storage.sync.set({ theme: this.theme });
-  }
-
-  updateThemeIcon() {
-    if (this.theme === 'light') {
-      this.sunIcon.style.display = 'block';
-      this.moonIcon.style.display = 'none';
-    } else {
-      this.sunIcon.style.display = 'none';
-      this.moonIcon.style.display = 'block';
+    handleServerUrlChange() {
+        const url = this.serverInput.value.trim();
+        this.status.serverUrl = url;
+        // Save to storage
+        chrome.storage.local.set({ serverUrl: url });
+        if (url && this.isValidWebSocketUrl(url)) {
+            this.addLog('info', `Server URL updated: ${url}`);
+        }
     }
-  }
-
-  toggleProjectMenu() {
-    // Simple implementation - in real app would show dropdown menu
-    this.showProjectModal();
-  }
-
-  updateProjectUI() {
-    if (this.currentProject) {
-      this.projectName.textContent = this.currentProject.name;
-      this.projectColor.style.backgroundColor = this.currentProject.color;
+    isValidWebSocketUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            return urlObj.protocol === 'ws:' || urlObj.protocol === 'wss:';
+        }
+        catch {
+            return false;
+        }
     }
-  }
-
-  updateInstructions() {
-    if (this.currentProject) {
-      const instructions = this.currentProject.instructions || '';
-      this.instructionsTextarea.value = instructions;
-      this.updateCharCount();
-    }
-  }
-
-  updateCharCount() {
-    const length = this.instructionsTextarea.value.length;
-    this.charCountCurrent.textContent = length;
-    
-    if (length > 1400) {
-      this.charCount.style.color = '#ff6b6b';
-    } else if (length > 1200) {
-      this.charCount.style.color = '#f59e0b';
-    } else {
-      this.charCount.style.color = '#6b7280';
-    }
-  }
-
-  async saveInstructions() {
-    if (!this.currentProject) return;
-    
-    this.currentProject.instructions = this.instructionsTextarea.value;
-    
-    // Update in storage
-    const projectIndex = this.projects.findIndex(p => p.id === this.currentProject.id);
-    if (projectIndex !== -1) {
-      this.projects[projectIndex] = this.currentProject;
-      await chrome.storage.sync.set({ projects: this.projects });
-      
-      // Show saved indicator
-      this.charCount.style.color = '#10a37f';
-      this.charCount.innerHTML = `${this.charCountCurrent.textContent} / 1500 ✓ Saved`;
-      
-      setTimeout(() => {
-        this.updateCharCount();
-      }, 2000);
-    }
-  }
-
-  async createNewChat() {
-    try {
-      // Send message to content script
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
-      if (tab && (tab.url.includes('chat.openai.com') || tab.url.includes('chatgpt.com'))) {
-        await chrome.tabs.sendMessage(tab.id, {
-          action: 'CREATE_NEW_CHAT',
-          project: this.currentProject,
-          prompt: this.promptInput.value
+    async sendToBackground(message) {
+        return new Promise((resolve, reject) => {
+            chrome.runtime.sendMessage(message, (response) => {
+                if (chrome.runtime.lastError) {
+                    reject(chrome.runtime.lastError);
+                }
+                else {
+                    resolve(response);
+                }
+            });
         });
-        
-        // Clear prompt
-        this.promptInput.value = '';
-        
-        // Close popup
-        window.close();
-      } else {
-        // Open ChatGPT in new tab
-        chrome.tabs.create({ url: 'https://chat.openai.com' });
-      }
-    } catch (error) {
-      console.error('Error creating new chat:', error);
-      this.showError('Failed to create new chat');
     }
-  }
-
-  async continueChat() {
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
-      if (tab && (tab.url.includes('chat.openai.com') || tab.url.includes('chatgpt.com'))) {
-        await chrome.tabs.sendMessage(tab.id, {
-          action: 'CONTINUE_CHAT',
-          project: this.currentProject,
-          prompt: this.promptInput.value
+    requestStatusFromBackground() {
+        this.sendToBackground({ action: 'getStatus' })
+            .then((response) => {
+            if (response && response.status) {
+                this.updateStatus(response.status);
+            }
+        })
+            .catch((error) => {
+            this.addLog('error', `Failed to get status: ${error}`);
         });
-        
-        this.promptInput.value = '';
-        window.close();
-      } else {
-        chrome.tabs.create({ url: 'https://chat.openai.com' });
-      }
-    } catch (error) {
-      console.error('Error continuing chat:', error);
     }
-  }
-
-  showHistory() {
-    // Open history page
-    chrome.tabs.create({ url: chrome.runtime.getURL('history.html') });
-  }
-
-  async sendQuickPrompt() {
-    const prompt = this.promptInput.value.trim();
-    if (!prompt) return;
-    
-    await this.continueChat();
-  }
-
-  async updateStatus() {
-    try {
-      // Check connection to ChatGPT
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
-      if (tab && (tab.url.includes('chat.openai.com') || tab.url.includes('chatgpt.com'))) {
-        this.statusIndicator.style.backgroundColor = '#10a37f';
-        this.statusText.textContent = 'Connected';
-      } else {
-        this.statusIndicator.style.backgroundColor = '#6b7280';
-        this.statusText.textContent = 'Not on ChatGPT';
-      }
-    } catch (error) {
-      this.statusIndicator.style.backgroundColor = '#ff6b6b';
-      this.statusText.textContent = 'Error';
+    updateStatus(newStatus) {
+        // Update status object
+        Object.assign(this.status, newStatus);
+        // Update UI elements
+        this.updateConnectionIndicator();
+        this.updateToggleButton();
+        if (newStatus.lastMessage && newStatus.lastMessage !== 'None') {
+            this.lastMessageElement.textContent = newStatus.lastMessage;
+        }
     }
-  }
-
-  showProjectModal() {
-    if (this.projectModal) {
-      this.projectModal.style.display = 'flex';
-      this.projectNameInput.focus();
+    updateConnectionIndicator() {
+        // Remove all status classes
+        this.statusDot.classList.remove('connected', 'disconnected', 'connecting');
+        if (this.status.connecting) {
+            this.statusDot.classList.add('connecting');
+            this.statusText.textContent = 'Connecting...';
+        }
+        else if (this.status.connected) {
+            this.statusDot.classList.add('connected');
+            this.statusText.textContent = 'Connected';
+        }
+        else {
+            this.statusDot.classList.add('disconnected');
+            this.statusText.textContent = 'Disconnected';
+        }
     }
-  }
-
-  hideProjectModal() {
-    if (this.projectModal) {
-      this.projectModal.style.display = 'none';
-      this.projectNameInput.value = '';
-      this.colorOptions.forEach(opt => opt.classList.remove('selected'));
+    updateToggleButton() {
+        this.toggleButton.disabled = this.status.connecting;
+        if (this.status.connecting) {
+            this.toggleButton.textContent = 'Connecting...';
+        }
+        else if (this.status.connected) {
+            this.toggleButton.textContent = 'Disconnect';
+        }
+        else {
+            this.toggleButton.textContent = 'Connect';
+        }
     }
-  }
-
-  selectColor(option) {
-    this.colorOptions.forEach(opt => opt.classList.remove('selected'));
-    option.classList.add('selected');
-  }
-
-  async saveNewProject() {
-    const name = this.projectNameInput.value.trim();
-    if (!name) return;
-    
-    const selectedColor = document.querySelector('.color-option.selected');
-    const color = selectedColor ? selectedColor.dataset.color : '#10a37f';
-    
-    const newProject = {
-      id: `project_${Date.now()}`,
-      name,
-      color,
-      instructions: '',
-      created: new Date().toISOString()
-    };
-    
-    this.projects.push(newProject);
-    this.currentProject = newProject;
-    
-    await chrome.storage.sync.set({
-      projects: this.projects,
-      currentProjectId: newProject.id
-    });
-    
-    this.updateProjectUI();
-    this.updateInstructions();
-    this.hideProjectModal();
-  }
-
-  showError(message) {
-    // Simple error display
-    console.error(message);
-    this.statusText.textContent = message;
-    this.statusIndicator.style.backgroundColor = '#ff6b6b';
-  }
+    addLog(type, message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry ${type}`;
+        logEntry.textContent = `[${timestamp}] ${message}`;
+        this.logPanel.appendChild(logEntry);
+        // Keep only last 20 log entries
+        while (this.logPanel.children.length > 20) {
+            this.logPanel.removeChild(this.logPanel.firstChild);
+        }
+        // Scroll to bottom
+        this.logPanel.scrollTop = this.logPanel.scrollHeight;
+    }
+    startStatusPolling() {
+        // Poll status every 2 seconds
+        setInterval(() => {
+            this.requestStatusFromBackground();
+        }, 2000);
+    }
+    startHealthCheckPolling() {
+        // Check health immediately
+        this.checkHealth();
+        // Poll health status every 5 seconds
+        setInterval(() => {
+            this.checkHealth();
+        }, 5000);
+    }
+    async checkHealth() {
+        try {
+            // First check server health
+            const serverHealthy = await this.checkServerHealth();
+            if (!serverHealthy) {
+                this.updateHealthStatus({
+                    component: 'server',
+                    healthy: false,
+                    message: 'Server unavailable',
+                    action: 'Start the server at localhost:3003'
+                });
+                return;
+            }
+            // Then check tab health
+            const tabHealth = await this.tabHealthCheck.getHealthStatus();
+            this.updateHealthStatus(tabHealth);
+        }
+        catch (error) {
+            this.updateHealthStatus({
+                component: 'extension',
+                healthy: false,
+                message: `Health check failed: ${error}`,
+                action: 'Check extension permissions'
+            });
+        }
+    }
+    async checkServerHealth() {
+        try {
+            const response = await fetch('http://localhost:3003/health');
+            if (response.ok) {
+                const health = await response.json();
+                return health.healthy === true;
+            }
+            return false;
+        }
+        catch {
+            return false;
+        }
+    }
+    updateHealthStatus(status) {
+        this.healthStatus = status;
+        // Update UI
+        this.healthStatusDot.classList.remove('active', 'inactive', 'warning');
+        if (status.healthy) {
+            this.healthStatusDot.classList.add('active');
+            this.healthStatusText.textContent = 'All systems healthy';
+        }
+        else {
+            this.healthStatusDot.classList.add('inactive');
+            this.healthStatusText.textContent = status.message || 'Health check failed';
+        }
+        // Log health status changes
+        if (!status.healthy) {
+            this.addLog('error', `Health: ${status.message} - ${status.action || 'No action available'}`);
+        }
+        // Handle automatic tab creation if needed
+        if (status.component === 'extension' && !status.healthy && status.message?.includes('No ChatGPT tab')) {
+            this.handleCreateChatGPTTab();
+        }
+    }
+    async handleCreateChatGPTTab() {
+        try {
+            const tab = await this.tabHealthCheck.ensureChatGPTTab();
+            this.addLog('success', `Created ChatGPT tab (ID: ${tab.id})`);
+            // Re-check health after creating tab
+            setTimeout(() => this.checkHealth(), 1000);
+        }
+        catch (error) {
+            this.addLog('error', `Failed to create ChatGPT tab: ${error}`);
+        }
+    }
 }
-
-// Initialize popup when DOM is ready
+// Listen for status updates from background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'statusUpdate') {
+        // This will be handled by the PopupController instance
+        console.log('Status update received in popup:', message.status);
+    }
+});
+// Initialize popup when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  new SemantestPopup();
+    new PopupController();
 });

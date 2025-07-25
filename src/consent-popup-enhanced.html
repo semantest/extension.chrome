@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semantest - Privacy Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    /* Overlay to ensure visibility */
+    .consent-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 999998;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    /* Main consent container */
+    .consent-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+      max-width: 500px;
+      width: 90%;
+      z-index: 999999;
+      overflow: hidden;
+      animation: slideIn 0.4s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translate(-50%, -50%) scale(0.9);
+        opacity: 0;
+      }
+      to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+      }
+    }
+    
+    /* Header with attention-grabbing design */
+    .consent-header {
+      background: linear-gradient(135deg, #10a37f 0%, #0d8a6c 100%);
+      color: white;
+      padding: 40px 30px 30px;
+      text-align: center;
+      position: relative;
+    }
+    
+    .consent-badge {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .consent-icon {
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 40px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+    
+    .consent-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: -0.5px;
+    }
+    
+    .consent-subtitle {
+      font-size: 18px;
+      opacity: 0.95;
+      font-weight: 400;
+      line-height: 1.4;
+    }
+    
+    /* Content section */
+    .consent-content {
+      padding: 40px 30px 30px;
+    }
+    
+    .privacy-summary {
+      background: #f8fffe;
+      border: 2px solid #10a37f;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      position: relative;
+    }
+    
+    .privacy-summary::before {
+      content: '🔒';
+      position: absolute;
+      top: -12px;
+      left: 20px;
+      background: white;
+      padding: 0 8px;
+      font-size: 20px;
+    }
+    
+    .privacy-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #065f46;
+      margin-bottom: 12px;
+      padding-top: 8px;
+    }
+    
+    .privacy-points {
+      list-style: none;
+    }
+    
+    .privacy-point {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 15px;
+      line-height: 1.5;
+      color: #374151;
+    }
+    
+    .privacy-point:last-child {
+      margin-bottom: 0;
+    }
+    
+    .point-icon {
+      width: 20px;
+      height: 20px;
+      background: #10a37f;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    /* Clear Yes/No buttons */
+    .consent-choices {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .choice-button {
+      flex: 1;
+      padding: 18px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .choice-button:focus {
+      outline: 3px solid #10a37f;
+      outline-offset: 3px;
+    }
+    
+    .choice-button.yes {
+      background: #10a37f;
+      color: white;
+      box-shadow: 0 4px 14px rgba(16, 163, 127, 0.3);
+    }
+    
+    .choice-button.yes:hover {
+      background: #0d8a6c;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 163, 127, 0.4);
+    }
+    
+    .choice-button.no {
+      background: #f3f4f6;
+      color: #374151;
+      border: 2px solid #e5e7eb;
+    }
+    
+    .choice-button.no:hover {
+      background: #e5e7eb;
+      border-color: #d1d5db;
+      transform: translateY(-2px);
+    }
+    
+    .button-label {
+      display: block;
+      margin-bottom: 4px;
+    }
+    
+    .button-sublabel {
+      font-size: 13px;
+      font-weight: 400;
+      opacity: 0.9;
+    }
+    
+    /* Settings link section */
+    .consent-footer {
+      text-align: center;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .settings-link {
+      color: #10a37f;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+    
+    .settings-link:hover {
+      background: #f0fdf4;
+      text-decoration: none;
+    }
+    
+    .settings-icon {
+      width: 16px;
+      height: 16px;
+    }
+    
+    /* Trust indicators */
+    .trust-badges {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 20px 0;
+      padding: 20px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    
+    .trust-badge {
+      text-align: center;
+    }
+    
+    .badge-icon {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+    
+    .badge-text {
+      font-size: 11px;
+      color: #6b7280;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Accessibility focus */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #10a37f;
+      color: white;
+      padding: 8px 16px;
+      text-decoration: none;
+      border-radius: 0 0 8px 0;
+    }
+    
+    .skip-link:focus {
+      top: 0;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 480px) {
+      .consent-container {
+        width: 95%;
+      }
+      
+      .consent-header {
+        padding: 30px 20px 25px;
+      }
+      
+      .consent-content {
+        padding: 30px 20px 25px;
+      }
+      
+      .consent-title {
+        font-size: 24px;
+      }
+      
+      .trust-badges {
+        gap: 15px;
+      }
+    }
+    
+    /* High contrast mode */
+    @media (prefers-contrast: high) {
+      .choice-button {
+        border: 3px solid currentColor;
+      }
+      
+      .privacy-summary {
+        border-width: 3px;
+      }
+    }
+    
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Skip link for accessibility -->
+  <a href="#consent-choices" class="skip-link">Skip to choices</a>
+  
+  <!-- Dark overlay -->
+  <div class="consent-overlay" aria-hidden="true"></div>
+  
+  <!-- Main consent dialog -->
+  <div class="consent-container" role="dialog" aria-labelledby="consent-title" aria-describedby="privacy-explanation">
+    <!-- Header -->
+    <header class="consent-header">
+      <div class="consent-badge">v1.0.1</div>
+      <div class="consent-icon" aria-hidden="true">👋</div>
+      <h1 id="consent-title" class="consent-title">Welcome to Semantest!</h1>
+      <p class="consent-subtitle">Quick privacy setup (30 seconds)</p>
+    </header>
+    
+    <!-- Content -->
+    <main class="consent-content">
+      <!-- Privacy explanation -->
+      <div class="privacy-summary" id="privacy-explanation">
+        <h2 class="privacy-title">We respect your privacy</h2>
+        <ul class="privacy-points">
+          <li class="privacy-point">
+            <span class="point-icon" aria-hidden="true">✓</span>
+            <span>We collect <strong>anonymous</strong> usage data to improve features</span>
+          </li>
+          <li class="privacy-point">
+            <span class="point-icon" aria-hidden="true">✓</span>
+            <span>We <strong>never</strong> see your ChatGPT conversations or content</span>
+          </li>
+          <li class="privacy-point">
+            <span class="point-icon" aria-hidden="true">✓</span>
+            <span>You can <strong>change your mind</strong> anytime in settings</span>
+          </li>
+        </ul>
+      </div>
+      
+      <!-- Trust indicators -->
+      <div class="trust-badges">
+        <div class="trust-badge">
+          <div class="badge-icon" aria-hidden="true">🛡️</div>
+          <div class="badge-text">90/100<br>Security</div>
+        </div>
+        <div class="trust-badge">
+          <div class="badge-icon" aria-hidden="true">🔒</div>
+          <div class="badge-text">GDPR<br>Compliant</div>
+        </div>
+        <div class="trust-badge">
+          <div class="badge-icon" aria-hidden="true">👥</div>
+          <div class="badge-text">500+<br>Beta Users</div>
+        </div>
+      </div>
+      
+      <!-- Clear Yes/No choices -->
+      <div id="consent-choices" class="consent-choices">
+        <button class="choice-button no" onclick="handleNo()" aria-label="Continue without sharing data">
+          <span class="button-label">No Thanks</span>
+          <span class="button-sublabel">Continue privately</span>
+        </button>
+        <button class="choice-button yes" onclick="handleYes()" aria-label="Share anonymous data to help improve">
+          <span class="button-label">Yes, Help Improve</span>
+          <span class="button-sublabel">Share anonymous data</span>
+        </button>
+      </div>
+      
+      <!-- Settings link -->
+      <footer class="consent-footer">
+        <a href="#" class="settings-link" onclick="openSettings()">
+          <svg class="settings-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 10a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M13.6 10a1 1 0 00.2-1.2l-.9-1.5a1 1 0 00-1.2-.4 5 5 0 01-.8-.4l-.1-.5a1 1 0 00-1-.8h-1.6a1 1 0 00-1 .8l-.1.5a5 5 0 01-.8.4 1 1 0 00-1.2.4l-.9 1.5a1 1 0 00.2 1.2l.4.3v.8l-.4.3a1 1 0 00-.2 1.2l.9 1.5a1 1 0 001.2.4c.3.2.5.3.8.4l.1.5a1 1 0 001 .8h1.6a1 1 0 001-.8l.1-.5a5 5 0 01.8-.4 1 1 0 001.2-.4l.9-1.5a1 1 0 00-.2-1.2l-.4-.3v-.8l.4-.3z" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+          <span>Manage privacy settings</span>
+        </a>
+      </footer>
+    </main>
+  </div>
+  
+  <script>
+    // Auto-focus on Yes button for better UX
+    window.addEventListener('load', () => {
+      document.querySelector('.choice-button.yes').focus();
+    });
+    
+    // Handle Yes choice
+    function handleYes() {
+      chrome.storage.local.set({
+        telemetryConsent: true,
+        consentTimestamp: Date.now(),
+        consentVersion: '1.0.1'
+      }, () => {
+        // Notify background script
+        chrome.runtime.sendMessage({
+          action: 'consentGranted',
+          timestamp: Date.now()
+        });
+        
+        // Show success feedback
+        showSuccess('Thanks for helping us improve! 🎉');
+      });
+    }
+    
+    // Handle No choice
+    function handleNo() {
+      chrome.storage.local.set({
+        telemetryConsent: false,
+        consentTimestamp: Date.now(),
+        consentVersion: '1.0.1'
+      }, () => {
+        // Notify background script
+        chrome.runtime.sendMessage({
+          action: 'consentDeclined',
+          timestamp: Date.now()
+        });
+        
+        // Show respectful acknowledgment
+        showSuccess('No problem! Enjoy Semantest privately. 🔒');
+      });
+    }
+    
+    // Open settings
+    function openSettings() {
+      chrome.runtime.openOptionsPage();
+    }
+    
+    // Show success message and close
+    function showSuccess(message) {
+      const container = document.querySelector('.consent-content');
+      container.innerHTML = `
+        <div style="text-align: center; padding: 60px 20px;">
+          <div style="font-size: 64px; margin-bottom: 20px;">✅</div>
+          <h2 style="font-size: 24px; margin-bottom: 10px; color: #1f2937;">${message}</h2>
+          <p style="color: #6b7280;">This window will close in 2 seconds...</p>
+        </div>
+      `;
+      
+      setTimeout(() => {
+        window.close();
+      }, 2000);
+    }
+    
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        handleNo();
+      }
+    });
+    
+    // Prevent closing without choice (works with retry logic)
+    window.addEventListener('beforeunload', (e) => {
+      const hasConsented = localStorage.getItem('semantest_consent_shown');
+      if (!hasConsented) {
+        // Mark as shown but not decided
+        localStorage.setItem('semantest_consent_shown', 'pending');
+      }
+    });
+  </script>
+</body>
+</html>

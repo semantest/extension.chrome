@@ -1,6 +1,7 @@
 // Browser extension background script for Web-Buddy integration
 // Handles WebSocket communication with Web-Buddy server
 import { globalMessageStore } from './message-store.js';
+import { healthCheckHandler } from './health-checks/index.js';
 let DEFAULT_SERVER_URL = 'ws://localhost:3003/ws';
 let ws = null;
 let extensionId = '';
@@ -526,6 +527,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'CONTENT_SCRIPT_READY') {
         console.log('✅ Content script ready in tab:', sender.tab?.id);
     }
+    // Handle addon health status updates
+    if (message.type === 'ADDON_HEALTH') {
+        console.log('🏥 Addon health update received:', message.data);
+        // Store the health status for popup to retrieve
+        chrome.storage.local.set({
+            addonHealthStatus: {
+                ...message.data,
+                lastUpdated: new Date().toISOString()
+            }
+        });
+        sendResponse({ received: true });
+    }
+    // Handle addon loaded notifications
+    if (message.type === 'ADDON_LOADED') {
+        console.log('✅ ChatGPT addon loaded:', message);
+        sendResponse({ received: true });
+    }
+    // Handle login state changes
+    if (message.type === 'LOGIN_STATE_CHANGED') {
+        console.log('🔄 ChatGPT login state changed:', message);
+        // Store the login state
+        chrome.storage.local.set({
+            chatGPTLoginState: {
+                loggedIn: message.loggedIn,
+                timestamp: message.timestamp
+            }
+        });
+        sendResponse({ received: true });
+    }
     return true; // Keep message channel open for async responses
 });
 // Handle extension lifecycle
@@ -535,3 +565,6 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(() => {
     console.log('🚀 Web-Buddy extension starting up');
 });
+// Initialize health check handler
+healthCheckHandler.setupMessageListeners();
+console.log('🏥 Health check system initialized');

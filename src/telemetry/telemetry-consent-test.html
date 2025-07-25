@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telemetry Consent UI Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .test-button {
+            padding: 12px 24px;
+            background: #10a37f;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .test-button:hover {
+            background: #0e9168;
+        }
+        
+        .test-button.secondary {
+            background: #6b7280;
+        }
+        
+        .test-button.secondary:hover {
+            background: #4b5563;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            border-radius: 4px;
+        }
+        
+        .code-block {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        
+        .code-block pre {
+            margin: 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+        
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .check {
+            color: #10a37f;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Telemetry Consent UI Test Page</h1>
+    
+    <div class="test-section">
+        <h2>Test the Consent Modal</h2>
+        <p>Click the button below to trigger the telemetry consent modal as it would appear to users:</p>
+        
+        <button class="test-button" onclick="showConsentModal()">
+            Show Consent Modal
+        </button>
+        
+        <button class="test-button secondary" onclick="simulateMessage()">
+            Simulate Extension Message
+        </button>
+        
+        <button class="test-button secondary" onclick="checkStorageState()">
+            Check Storage State
+        </button>
+        
+        <div id="status" class="status" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Features Implemented</h2>
+        <ul class="feature-list">
+            <li>
+                <span class="check">✓</span>
+                <span>Beautiful, modern UI design with smooth animations</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>Full accessibility support (ARIA labels, keyboard navigation, focus trap)</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>Handles SHOW_TELEMETRY_CONSENT_MODAL message</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>Updates telemetryConsent in chrome.storage.sync</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>Clears telemetryConsentPending flag after user choice</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>Dark mode support with media query</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>Responsive design for mobile devices</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>Toast notifications for user feedback</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>Prevents dismissal without explicit choice</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>Privacy-focused messaging and clear value proposition</span>
+            </li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>Integration Example</h2>
+        <p>Here's how the consent manager integrates with the safety checks:</p>
+        
+        <div class="code-block">
+            <pre>// In your background script or content script
+chrome.runtime.sendMessage({
+    action: 'SHOW_TELEMETRY_CONSENT_MODAL'
+}, (response) => {
+    console.log('User consent:', response.consent);
+    // Handle the consent response
+});
+
+// The consent manager will:
+// 1. Show the beautiful modal
+// 2. Wait for user choice
+// 3. Update chrome.storage.sync with:
+//    - telemetryConsent: true/false
+//    - telemetryConsentTimestamp: ISO string
+// 4. Remove telemetryConsentPending flag
+// 5. Send response back to caller</pre>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Accessibility Features</h2>
+        <ul class="feature-list">
+            <li>
+                <span class="check">✓</span>
+                <span>Full keyboard navigation support</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>Focus trap within modal</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>ARIA labels and roles for screen readers</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>ESC key to decline</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>High contrast mode support</span>
+            </li>
+            <li>
+                <span class="check">✓</span>
+                <span>Reduced motion support</span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Include the consent manager script -->
+    <script src="telemetry-consent-enhanced.js"></script>
+    
+    <script>
+        // Mock chrome API for testing
+        if (!window.chrome || !window.chrome.storage) {
+            window.chrome = {
+                storage: {
+                    sync: {
+                        set: (data) => {
+                            console.log('Mock storage.sync.set:', data);
+                            localStorage.setItem('telemetryData', JSON.stringify(data));
+                            return Promise.resolve();
+                        },
+                        get: (keys) => {
+                            const stored = localStorage.getItem('telemetryData');
+                            return Promise.resolve(stored ? JSON.parse(stored) : {});
+                        },
+                        remove: (keys) => {
+                            console.log('Mock storage.sync.remove:', keys);
+                            return Promise.resolve();
+                        }
+                    }
+                },
+                runtime: {
+                    sendMessage: (message, callback) => {
+                        console.log('Mock runtime.sendMessage:', message);
+                        if (callback) callback({ success: true });
+                    },
+                    onMessage: {
+                        addListener: () => console.log('Mock message listener added')
+                    }
+                },
+                tabs: {
+                    create: (options) => {
+                        console.log('Mock tabs.create:', options);
+                        window.open(options.url, '_blank');
+                    }
+                }
+            };
+        }
+        
+        function showConsentModal() {
+            const manager = new EnhancedTelemetryConsentManager();
+            manager.showConsentDialog().then(consent => {
+                showStatus(`User chose: ${consent ? 'Accept' : 'Decline'}`);
+            });
+        }
+        
+        function simulateMessage() {
+            // Simulate the extension sending the message
+            chrome.runtime.sendMessage({
+                action: 'SHOW_TELEMETRY_CONSENT_MODAL'
+            }, (response) => {
+                showStatus(`Message response - Consent: ${response ? response.consent : 'No response'}`);
+            });
+        }
+        
+        async function checkStorageState() {
+            const data = await chrome.storage.sync.get(['telemetryConsent', 'telemetryConsentTimestamp', 'telemetryConsentPending']);
+            showStatus(`Storage state:<br>
+                Consent: ${data.telemetryConsent !== undefined ? data.telemetryConsent : 'Not set'}<br>
+                Timestamp: ${data.telemetryConsentTimestamp || 'Not set'}<br>
+                Pending: ${data.telemetryConsentPending !== undefined ? data.telemetryConsentPending : 'Not set'}`);
+        }
+        
+        function showStatus(message) {
+            const status = document.getElementById('status');
+            status.innerHTML = message;
+            status.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

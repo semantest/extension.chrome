@@ -1,6 +1,8 @@
 // Error Telemetry System for ChatGPT Extension Beta
 // Captures and reports errors anonymously for debugging
 
+// Prevent duplicate declarations
+if (typeof ErrorReporter === 'undefined') {
 class ErrorReporter {
   constructor() {
     this.isEnabled = false;
@@ -327,3 +329,4 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof window !== 'undefined' && !window.errorReporter) {
   window.errorReporter = new ErrorReporter();
 }
+} // Close the if (typeof ErrorReporter === 'undefined')

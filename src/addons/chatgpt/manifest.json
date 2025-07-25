@@ -1,0 +1,31 @@
+{
+  "addon_id": "chatgpt_addon",
+  "version": "1.0.0",
+  "name": "ChatGPT Integration",
+  "description": "Enables ChatGPT automation and image generation",
+  "domains": [
+    "chat.openai.com",
+    "chatgpt.com"
+  ],
+  "entry_point": "index.js",
+  "permissions": [
+    "activeTab"
+  ],
+  "events": [
+    "pageLoad",
+    "domMutation"
+  ],
+  "websocket_events": [
+    "core:message",
+    "addon:chatgpt:*",
+    "semantest/custom/image/request/received"
+  ],
+  "scripts": [
+    "state-detector.js",
+    "controller.js",
+    "button-clicker.js",
+    "direct-send.js",
+    "image-generator.js",
+    "index.js"
+  ]
+}

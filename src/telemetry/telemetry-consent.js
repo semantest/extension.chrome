@@ -1,6 +1,9 @@
 // Telemetry Consent UI Component
 // Handles user consent for error reporting
 
+// Check if already defined to avoid duplicate declaration
+if (typeof TelemetryConsentManager === 'undefined') {
+
 class TelemetryConsentManager {
   constructor() {
     this.consentModalId = 'telemetry-consent-modal';
@@ -419,3 +422,5 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
   window.TelemetryConsentManager = TelemetryConsentManager;
 }
+
+} // End of if (typeof TelemetryConsentManager === 'undefined')

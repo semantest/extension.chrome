@@ -180,6 +180,30 @@
       
       <div class="status-divider"></div>
       
+      <!-- Health Check Status -->
+      <div class="status-item health-status-expanded" id="healthStatus">
+        <div class="health-layers">
+          <div class="health-layer" id="browserHealth">
+            <div class="status-dot" data-layer="browser"></div>
+            <span class="layer-name">Browser</span>
+          </div>
+          <div class="health-layer" id="extensionHealth">
+            <div class="status-dot" data-layer="extension"></div>
+            <span class="layer-name">Extension</span>
+          </div>
+          <div class="health-layer" id="addonHealth">
+            <div class="status-dot" data-layer="addon"></div>
+            <span class="layer-name">Addon</span>
+          </div>
+        </div>
+        <div class="health-actions hidden" id="healthActions">
+          <button class="mini-action-btn" id="launchBrowserBtn">Launch Browser</button>
+          <button class="mini-action-btn" id="openChatGPTBtn">Open ChatGPT</button>
+        </div>
+      </div>
+      
+      <div class="status-divider"></div>
+      
       <div class="status-item">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path d="M7 2v5l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -201,5 +225,6 @@
   </div>
 
   <script src="popup.js"></script>
+  <script type="module" src="health-check-ui.js"></script>
 </body>
 </html>

@@ -1,0 +1,53 @@
+body {
+  width: 350px;
+  min-height: 400px;
+  margin: 0;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+h1 {
+  font-size: 18px;
+  margin: 0 0 20px 0;
+}
+
+.status {
+  padding: 10px;
+  background: #f0f0f0;
+  border-radius: 5px;
+  margin: 10px 0;
+}
+
+.healthy {
+  background: #d4edda;
+  color: #155724;
+}
+
+.unhealthy {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.mt-20 {
+  margin-top: 20px;
+}
+
+.ml-10 {
+  margin-left: 10px;
+}
+
+.test-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+select {
+  padding: 8px;
+  font-size: 14px;
+}

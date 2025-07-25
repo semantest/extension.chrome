@@ -33,11 +33,19 @@ class PopupController {
   }
 
   bindEvents() {
-    this.toggleButton.addEventListener('click', () => this.handleToggleConnection());
-    this.serverInput.addEventListener('change', () => this.handleServerUrlChange());
-    this.serverInput.addEventListener('input', () => this.handleServerUrlChange());
-    this.viewPatternsBtn.addEventListener('click', () => this.handleViewPatterns());
-    this.clearOldDataBtn.addEventListener('click', () => this.handleClearOldData());
+    if (this.toggleButton) {
+      this.toggleButton.addEventListener('click', () => this.handleToggleConnection());
+    }
+    if (this.serverInput) {
+      this.serverInput.addEventListener('change', () => this.handleServerUrlChange());
+      this.serverInput.addEventListener('input', () => this.handleServerUrlChange());
+    }
+    if (this.viewPatternsBtn) {
+      this.viewPatternsBtn.addEventListener('click', () => this.handleViewPatterns());
+    }
+    if (this.clearOldDataBtn) {
+      this.clearOldDataBtn.addEventListener('click', () => this.handleClearOldData());
+    }
   }
 
   async loadInitialData() {
@@ -46,7 +54,9 @@ class PopupController {
       
       // Get extension ID
       this.status.extensionId = chrome.runtime.id;
-      this.extensionIdElement.textContent = this.status.extensionId;
+      if (this.extensionIdElement) {
+        this.extensionIdElement.textContent = this.status.extensionId;
+      }
       this.addLog('info', `Extension ID: ${this.status.extensionId}`);
 
       // Get current tab info
@@ -214,6 +224,11 @@ class PopupController {
   }
 
   addLog(type, message) {
+    if (!this.logPanel) {
+      console.log(`[${type}] ${message}`);
+      return;
+    }
+    
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = document.createElement('div');
     logEntry.className = `log-entry ${type}`;
@@ -234,13 +249,96 @@ class PopupController {
     // Poll status every 2 seconds
     setInterval(() => {
       this.requestStatusFromBackground();
+      this.performHealthCheck(); // Also check health
     }, 2000);
     
     // Also request status immediately on popup open
     setTimeout(() => {
       this.requestStatusFromBackground();
+      this.performHealthCheck(); // Initial health check
     }, 100);
   }
+
+  // TASK 6: Extension Health Module - Emma implementing NOW!
+  async checkChatGPTTabs() {
+    try {
+      const tabs = await chrome.tabs.query({url: "https://chatgpt.com/*"});
+      return {
+        healthy: tabs.length > 0,
+        tabCount: tabs.length,
+        tabIds: tabs.map(t => t.id)
+      };
+    } catch (e) {
+      console.error('Error checking ChatGPT tabs:', e);
+      return {
+        healthy: false,
+        tabCount: 0,
+        tabIds: [],
+        error: e.message
+      };
+    }
+  }
+
+  // TASK 6: Poll server health - Emma implementing NOW!
+  async checkServerHealth() {
+    try {
+      const response = await fetch('http://localhost:8080/health');
+      return await response.json();
+    } catch (e) {
+      console.warn('Server health check failed (CORS or server offline):', e.message);
+      // Return a default response to not block extension functionality
+      return { 
+        healthy: false, 
+        error: 'Server unreachable (CORS or offline)',
+        note: 'Extension can still handle image requests'
+      };
+    }
+  }
+
+  // TASK 6: Combined health check with visual updates
+  async performHealthCheck() {
+    try {
+      // Check server health
+      const serverHealth = await this.checkServerHealth();
+      
+      // Check ChatGPT tabs
+      const tabHealth = await this.checkChatGPTTabs();
+      
+      // Update visual indicators
+      this.updateHealthVisuals(serverHealth, tabHealth);
+      
+      // Log status
+      this.addLog('info', `Health: Server=${serverHealth.healthy}, Tabs=${tabHealth.tabCount}`);
+      
+    } catch (error) {
+      this.addLog('error', `Health check failed: ${error.message}`);
+    }
+  }
+
+  // TASK 6: Update visual health indicators
+  updateHealthVisuals(serverHealth, tabHealth) {
+    const healthDot = document.getElementById('healthStatusDot');
+    const healthText = document.getElementById('healthStatusText');
+    
+    if (!healthDot || !healthText) return;
+    
+    // Clear previous states
+    healthDot.classList.remove('active', 'inactive', 'warning');
+    
+    if (!serverHealth.healthy) {
+      healthDot.classList.add('inactive');
+      healthText.textContent = 'Server offline';
+    } else if (tabHealth.tabCount === 0) {
+      healthDot.classList.add('warning');
+      healthText.textContent = 'No ChatGPT tabs';
+    } else {
+      healthDot.classList.add('active');
+      healthText.textContent = `Healthy (${tabHealth.tabCount} tabs)`;
+    }
+  }
+
+
+
 
   async loadStorageStats() {
     try {

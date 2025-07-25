@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Semantest Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #10A37F;
+        }
+        .icon-preview {
+            display: inline-block;
+            margin: 10px;
+            text-align: center;
+        }
+        .icon-preview canvas {
+            border: 1px solid #ddd;
+            margin: 5px;
+        }
+        button {
+            background: #10A37F;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0A7E5F;
+        }
+        .instructions {
+            background: #f0f8f5;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Semantest Icon Generator</h1>
+        
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Click "Generate Icons" to create all sizes</li>
+                <li>Right-click each canvas and "Save Image As..."</li>
+                <li>Save with the correct filename (icon16.png, icon32.png, etc.)</li>
+                <li>Place in the extension.chrome/assets/ directory</li>
+            </ol>
+        </div>
+
+        <button onclick="generateIcons()">Generate Icons</button>
+
+        <div id="icons"></div>
+    </div>
+
+    <script>
+        function generateIcons() {
+            const sizes = [16, 32, 48, 128];
+            const container = document.getElementById('icons');
+            container.innerHTML = '';
+
+            sizes.forEach(size => {
+                const div = document.createElement('div');
+                div.className = 'icon-preview';
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                
+                const ctx = canvas.getContext('2d');
+                
+                // Draw the icon
+                drawIcon(ctx, size);
+                
+                const label = document.createElement('div');
+                label.textContent = `icon${size}.png (${size}x${size})`;
+                
+                div.appendChild(canvas);
+                div.appendChild(label);
+                container.appendChild(div);
+            });
+        }
+
+        function drawIcon(ctx, size) {
+            const scale = size / 128;
+            ctx.scale(scale, scale);
+            
+            // Background circle
+            ctx.beginPath();
+            ctx.arc(64, 64, 60, 0, Math.PI * 2);
+            const gradient1 = ctx.createLinearGradient(0, 0, 128, 128);
+            gradient1.addColorStop(0, '#10A37F');
+            gradient1.addColorStop(1, '#0A7E5F');
+            ctx.fillStyle = gradient1;
+            ctx.fill();
+            ctx.strokeStyle = '#10A37F';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Inner glow
+            ctx.beginPath();
+            ctx.arc(64, 64, 50, 0, Math.PI * 2);
+            const gradient2 = ctx.createRadialGradient(64, 64, 0, 64, 64, 50);
+            gradient2.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+            gradient2.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = gradient2;
+            ctx.fill();
+            
+            // S symbol
+            ctx.beginPath();
+            ctx.moveTo(48, 40);
+            ctx.bezierCurveTo(48, 30, 58, 25, 68, 25);
+            ctx.bezierCurveTo(78, 25, 88, 30, 88, 40);
+            ctx.bezierCurveTo(88, 50, 78, 55, 68, 55);
+            ctx.bezierCurveTo(58, 55, 48, 60, 48, 70);
+            ctx.bezierCurveTo(48, 80, 58, 85, 68, 85);
+            ctx.bezierCurveTo(78, 85, 88, 80, 88, 70);
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+            
+            // AI nodes
+            const nodes = [[40, 40], [88, 40], [40, 88], [88, 88]];
+            ctx.fillStyle = '#FFFFFF';
+            nodes.forEach(([x, y]) => {
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Automation dots
+            const dots = [[64, 20], [108, 64], [64, 108], [20, 64]];
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            dots.forEach(([x, y]) => {
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Auto-generate on load
+        window.onload = generateIcons;
+    </script>
+</body>
+</html>

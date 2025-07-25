@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Dashboard Test - v1.0.2</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .test-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        
+        .test-controls h3 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .test-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 16px;
+            margin-bottom: 8px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .test-btn:hover {
+            background: #2563eb;
+        }
+        
+        .test-btn:last-child {
+            margin-bottom: 0;
+        }
+        
+        .test-btn.danger {
+            background: #ef4444;
+        }
+        
+        .test-btn.danger:hover {
+            background: #dc2626;
+        }
+        
+        @media (max-width: 768px) {
+            .test-controls {
+                position: static;
+                margin: 20px;
+                box-shadow: none;
+                border: 1px solid #e5e7eb;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="monitoring-dashboard"></div>
+    
+    <div class="test-controls">
+        <h3>Test Controls</h3>
+        <button class="test-btn" onclick="simulateActiveUsers()">
+            Simulate Active Users
+        </button>
+        <button class="test-btn" onclick="simulateErrors()">
+            Add Sample Errors
+        </button>
+        <button class="test-btn" onclick="updatePerformance()">
+            Update Performance
+        </button>
+        <button class="test-btn danger" onclick="clearData()">
+            Clear All Data
+        </button>
+    </div>
+
+    <script src="MonitoringDashboard.js"></script>
+    <script>
+        // Mock chrome API for testing
+        if (!window.chrome || !window.chrome.storage) {
+            window.chrome = {
+                storage: {
+                    local: {
+                        get: (keys) => {
+                            const stored = localStorage.getItem('monitoringData');
+                            return Promise.resolve(stored ? JSON.parse(stored) : {});
+                        },
+                        set: (data) => {
+                            const existing = JSON.parse(localStorage.getItem('monitoringData') || '{}');
+                            Object.assign(existing, data);
+                            localStorage.setItem('monitoringData', JSON.stringify(existing));
+                            return Promise.resolve();
+                        }
+                    },
+                    sync: {
+                        get: (keys) => {
+                            const data = {
+                                telemetryConsent: true,
+                                telemetryConsentTimestamp: new Date().toISOString()
+                            };
+                            return Promise.resolve(data);
+                        }
+                    }
+                }
+            };
+        }
+
+        // Initialize dashboard
+        const dashboard = new MonitoringDashboard();
+        dashboard.init();
+
+        // Test functions
+        function simulateActiveUsers() {
+            const metrics = {
+                telemetryMetrics: {
+                    activeUsers: Math.floor(Math.random() * 1000) + 500,
+                    sessionDuration: Math.floor(Math.random() * 300) + 60,
+                    pageViews: Math.floor(Math.random() * 5000) + 1000
+                }
+            };
+            chrome.storage.local.set(metrics).then(() => {
+                dashboard.loadMetrics().then(() => {
+                    dashboard.updateMetrics();
+                });
+            });
+        }
+
+        function simulateErrors() {
+            const errors = [
+                {
+                    timestamp: Date.now() - Math.random() * 3600000,
+                    message: 'Failed to load user preferences',
+                    component: 'popup.js',
+                    count: Math.floor(Math.random() * 5) + 1
+                },
+                {
+                    timestamp: Date.now() - Math.random() * 3600000,
+                    message: 'Network timeout on API call',
+                    component: 'background.js',
+                    count: Math.floor(Math.random() * 3) + 1
+                },
+                {
+                    timestamp: Date.now() - Math.random() * 3600000,
+                    message: 'Invalid storage key accessed',
+                    component: 'storage.js',
+                    count: 1
+                },
+                {
+                    timestamp: Date.now() - Math.random() * 3600000,
+                    message: 'Content script injection failed',
+                    component: 'content.js',
+                    count: Math.floor(Math.random() * 2) + 1
+                }
+            ];
+
+            chrome.storage.local.get(['errorReports']).then(result => {
+                const existing = result.errorReports || [];
+                const updated = [...existing, ...errors].slice(-50);
+                chrome.storage.local.set({ errorReports: updated }).then(() => {
+                    dashboard.loadMetrics().then(() => {
+                        dashboard.updateMetrics();
+                        dashboard.drawErrorChart();
+                    });
+                });
+            });
+        }
+
+        function updatePerformance() {
+            const perfMetrics = {
+                telemetryMetrics: {
+                    performance: {
+                        loadTime: Math.floor(Math.random() * 200) + 50,
+                        memoryUsage: (Math.random() * 20 + 10).toFixed(1),
+                        apiCallsPerMinute: Math.floor(Math.random() * 100) + 20,
+                        cacheHitRate: Math.floor(Math.random() * 30) + 60
+                    }
+                }
+            };
+            chrome.storage.local.set(perfMetrics).then(() => {
+                dashboard.loadMetrics().then(() => {
+                    dashboard.updateMetrics();
+                });
+            });
+        }
+
+        function clearData() {
+            if (confirm('Clear all monitoring data?')) {
+                localStorage.removeItem('monitoringData');
+                chrome.storage.local.set({
+                    telemetryMetrics: {},
+                    errorReports: []
+                }).then(() => {
+                    dashboard.loadMetrics().then(() => {
+                        dashboard.render();
+                    });
+                });
+            }
+        }
+
+        // Simulate some initial data
+        setTimeout(() => {
+            simulateActiveUsers();
+            simulateErrors();
+            updatePerformance();
+        }, 1000);
+    </script>
+</body>
+</html>

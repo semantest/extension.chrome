@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup-simple.css">
+</head>
+<body>
+  <h1>Semantest Extension</h1>
+  
+  <div id="status" class="status">
+    Loading...
+  </div>
+  
+  <div>
+    <h3>ChatGPT Tabs:</h3>
+    <div id="tabStatus">Checking...</div>
+  </div>
+  
+  <div class="mt-20">
+    <button id="testImage">Test Image Generation</button>
+    <button id="testDirect" class="ml-10">Test Direct Send</button>
+  </div>
+  
+  <div class="mt-20">
+    <h3>Test Button Click Flow:</h3>
+    <button id="testButtonClick" class="test-button">Test Button Click</button>
+    <select id="buttonType" class="ml-10">
+      <option value="any">Any Button</option>
+      <option value="regenerate">Regenerate</option>
+      <option value="continue">Continue</option>
+      <option value="new-chat">New Chat</option>
+    </select>
+  </div>
+  
+  <div class="mt-20">
+    <h3>🎨 Image Download Test:</h3>
+    <input type="text" id="downloadPrompt" placeholder="Enter prompt for download" style="width: 100%; margin: 5px 0; padding: 5px;">
+    <input type="text" id="targetFolder" placeholder="Target folder (default: /home/user/images)" style="width: 100%; margin: 5px 0; padding: 5px;">
+    <button id="testDownload" class="test-button">Send Download Request</button>
+  </div>
+  
+  <script src="popup-simple.js"></script>
+</body>
+</html>
