@@ -313,13 +313,33 @@ async function enterImagePrompt(promptText) {
     
     let generateButton = null;
     
-    // Look for button near the input first (but skip upload and tool buttons)
+    // Look for button near the input first (but skip upload, tool, and MICROPHONE buttons)
     const inputContainer = imageInput.closest('form') || imageInput.parentElement?.parentElement;
     if (inputContainer) {
       const nearbyButtons = inputContainer.querySelectorAll('button:not([disabled])');
+      let micButton = null;
+      
       for (const btn of nearbyButtons) {
         const ariaLabel = btn.getAttribute('aria-label')?.toLowerCase() || '';
+        const title = btn.getAttribute('title')?.toLowerCase() || '';
         const btnId = btn.id?.toLowerCase() || '';
+        
+        // CRITICAL: Detect microphone button
+        const hasMicIcon = btn.querySelector('svg path[d*="M12 2"]') || // Common mic path
+                          btn.querySelector('svg path[d*="microphone"]') ||
+                          ariaLabel.includes('microphone') ||
+                          ariaLabel.includes('voice') ||
+                          title.includes('microphone');
+        
+        if (hasMicIcon) {
+          console.log('🎤 DETECTED MICROPHONE BUTTON - SKIP!', {
+            id: btn.id,
+            ariaLabel: ariaLabel,
+            title: title
+          });
+          micButton = btn;
+          continue;
+        }
         
         // Skip unwanted buttons
         if (btn.id === 'upload-file-btn' || 
@@ -343,7 +363,8 @@ async function enterImagePrompt(promptText) {
             id: btn.id,
             type: btn.type,
             ariaLabel: btn.getAttribute('aria-label'),
-            hasSvg: btn.querySelector('svg') !== null
+            hasSvg: btn.querySelector('svg') !== null,
+            notMicrophone: btn !== micButton
           });
           break;
         }
@@ -395,9 +416,23 @@ async function enterImagePrompt(promptText) {
         });
       });
       
-      // Try to find the send button by looking for the last non-upload/non-tool button
+      // Try to find the send button by looking for the last non-upload/non-tool/non-microphone button
       const formButtons = Array.from(allFormButtons).filter(btn => {
         const ariaLabel = btn.getAttribute('aria-label')?.toLowerCase() || '';
+        const title = btn.getAttribute('title')?.toLowerCase() || '';
+        
+        // CRITICAL: Detect and exclude microphone button
+        const hasMicIcon = btn.querySelector('svg path[d*="M12 2"]') || // Common mic path
+                          btn.querySelector('svg path[d*="microphone"]') ||
+                          ariaLabel.includes('microphone') ||
+                          ariaLabel.includes('voice') ||
+                          title.includes('microphone');
+        
+        if (hasMicIcon) {
+          console.log('🎤 Filtering out microphone button:', btn.id, ariaLabel);
+          return false;
+        }
+        
         return btn.id !== 'upload-file-btn' && 
                btn.id !== 'system-hint-button' &&
                !ariaLabel.includes('file') &&
