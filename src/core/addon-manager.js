@@ -144,7 +144,17 @@ class AddonManager {
     console.log(`💉 Injecting addon ${addon.addon_id} into tab ${tabId}`);
     
     try {
-      // First inject the message bus and core dependencies
+      // First inject the content bridge in ISOLATED world for chrome.runtime access
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['src/content/chatgpt-bridge.js'],
+        world: 'ISOLATED' // Content script world for chrome.runtime API access
+      });
+      
+      // Wait a bit for bridge to initialize
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Then inject the message bus and core dependencies in MAIN world
       await chrome.scripting.executeScript({
         target: { tabId },
         files: [
