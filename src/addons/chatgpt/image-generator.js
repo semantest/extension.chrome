@@ -329,7 +329,9 @@ async function enterImagePrompt(promptText) {
                           btn.querySelector('svg path[d*="microphone"]') ||
                           ariaLabel.includes('microphone') ||
                           ariaLabel.includes('voice') ||
-                          title.includes('microphone');
+                          ariaLabel.includes('dictate') || // NEW: ChatGPT calls it "Dictate button"
+                          title.includes('microphone') ||
+                          title.includes('dictate');
         
         if (hasMicIcon) {
           console.log('🎤 DETECTED MICROPHONE BUTTON - SKIP!', {
@@ -426,7 +428,9 @@ async function enterImagePrompt(promptText) {
                           btn.querySelector('svg path[d*="microphone"]') ||
                           ariaLabel.includes('microphone') ||
                           ariaLabel.includes('voice') ||
-                          title.includes('microphone');
+                          ariaLabel.includes('dictate') || // NEW: ChatGPT calls it "Dictate button"
+                          title.includes('microphone') ||
+                          title.includes('dictate');
         
         if (hasMicIcon) {
           console.log('🎤 Filtering out microphone button:', btn.id, ariaLabel);
