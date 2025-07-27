@@ -301,9 +301,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           break;
           
         case 'GET_ACTIVE_ADDON':
-          // Simple addon detection based on tab URL
-          if (sender.tab && sender.tab.url) {
-            const url = new URL(sender.tab.url);
+          // Get the active tab if not sent from a tab
+          let checkUrl = sender.tab?.url;
+          
+          if (!checkUrl) {
+            // Get the active tab
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tabs.length > 0) {
+              checkUrl = tabs[0].url;
+            }
+          }
+          
+          if (checkUrl) {
+            const url = new URL(checkUrl);
             if (url.hostname.includes('chat.openai.com') || url.hostname.includes('chatgpt.com')) {
               response = {
                 success: true,
@@ -318,6 +328,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           } else {
             response = { success: true, addon: null };
           }
+          break;
+          
+        case 'addon:response':
+          // Handle response from addon (image generation result)
+          console.log('📨 Received addon response:', request);
+          
+          // Forward the response back to WebSocket
+          if (wsHandler && wsHandler.ws && wsHandler.ws.readyState === WebSocket.OPEN) {
+            wsHandler.send({
+              type: 'semantest/custom/image/response',
+              data: {
+                success: request.success,
+                result: request.result,
+                error: request.error
+              }
+            });
+          }
+          
+          response = { success: true };
           break;
           
         default:
