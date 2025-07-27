@@ -25,10 +25,14 @@ function startImageMonitoring() {
   
   // Capture all existing images to ignore them
   const existingImages = document.querySelectorAll('img');
+  console.log(`📊 Found ${existingImages.length} existing images`);
   existingImages.forEach(img => {
     if (img.src) {
       initialImages.add(img.src);
-      console.log('📌 Marking existing image:', img.src.substring(0, 50) + '...');
+      // Only log DALL-E type images
+      if (img.src.includes('openai') || img.src.includes('dalle') || img.src.includes('blob:')) {
+        console.log('📌 Marking existing DALL-E image:', img.src.substring(0, 50) + '...');
+      }
     }
   });
   
@@ -151,6 +155,20 @@ function isGeneratedImage(img) {
                    img.closest('[class*="result"]') ||
                    img.closest('div[class*="markdown"]');
   
+  // Additional check: is this in a recent message (not from scrolled history)?
+  const messageContainer = img.closest('[data-testid="conversation-turn"]');
+  if (messageContainer) {
+    // Check if this is one of the last few messages (not from scrolled history)
+    const allMessages = document.querySelectorAll('[data-testid="conversation-turn"]');
+    const messageIndex = Array.from(allMessages).indexOf(messageContainer);
+    const isRecent = messageIndex >= allMessages.length - 3; // One of last 3 messages
+    
+    if (!isRecent) {
+      console.log('🚫 Ignoring image from old message (index:', messageIndex, 'of', allMessages.length, ')');
+      return false;
+    }
+  }
+  
   // Check minimum size (generated images are usually larger)
   // Note: naturalWidth/Height might be 0 if image is still loading
   const minSize = 100; // Lowered threshold
@@ -192,7 +210,17 @@ async function handleGeneratedImage(img) {
     return;
   }
   
-  console.log('🖼️ Found generated image:', src.substring(0, 50) + '...');
+  console.log('🖼️ Found NEW generated image:', src.substring(0, 50) + '...');
+  
+  // Wait for image to fully load if needed
+  if (!img.complete) {
+    console.log('⏳ Waiting for image to load...');
+    await new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve; // Continue even if error
+      setTimeout(resolve, 5000); // Timeout after 5 seconds
+    });
+  }
   
   // Mark as downloaded to prevent duplicates
   downloadedImages.add(src);
