@@ -11,8 +11,7 @@ function debugChatGPTInterface() {
   console.log('🎯 In image mode?', placeholder?.toLowerCase().includes('image') ? 'YES' : 'NO');
   
   // 2. Find tools menu button
-  console.log('
-🔍 Looking for tools/menu buttons...');
+  console.log('🔍 Looking for tools/menu buttons...');
   
   // Look for buttons with SVG icons that might be the tools menu
   const allButtons = [...document.querySelectorAll('button')];
@@ -40,8 +39,7 @@ function debugChatGPTInterface() {
   
   // Check for the specific button found
   const toolsButton = document.querySelector('button[id^="radix-"][aria-haspopup="menu"]');
-  console.log('
-🔧 Tools menu button:', toolsButton ? 'FOUND' : 'NOT FOUND');
+  console.log('🔧 Tools menu button:', toolsButton ? 'FOUND' : 'NOT FOUND');
   if (toolsButton) {
     console.log('   Button ID:', toolsButton.id);
     console.log('   Has SVG:', toolsButton.querySelector('svg') !== null);
@@ -51,10 +49,10 @@ function debugChatGPTInterface() {
   // 3. Check for image-related buttons
   console.log('\n🔍 Searching for image-related elements...');
   
-  const allButtons = [...document.querySelectorAll('button'), 
+  const allElements = [...document.querySelectorAll('button'), 
                      ...document.querySelectorAll('div[role="button"]')];
   
-  const imageRelated = allButtons.filter(btn => {
+  const imageRelated = allElements.filter(btn => {
     const text = btn.textContent?.toLowerCase() || '';
     const aria = btn.getAttribute('aria-label')?.toLowerCase() || '';
     return (text.includes('image') || text.includes('dall') || 
@@ -73,7 +71,7 @@ function debugChatGPTInterface() {
   console.log('\n🌟 Looking for "Create image" tool...');
   
   // Sometimes the tool is already in the interface as a button
-  const createImageButtons = allButtons.filter(btn => {
+  const createImageButtons = allElements.filter(btn => {
     const text = btn.textContent?.toLowerCase() || '';
     const aria = btn.getAttribute('aria-label')?.toLowerCase() || '';
     return (text.includes('create image') || aria.includes('create image')) && 

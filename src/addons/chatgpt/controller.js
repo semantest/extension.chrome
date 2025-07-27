@@ -996,5 +996,6 @@ class ChatGPTController {
 //   console.log('✅ Content script message listener registered');
 // }
 // 
-// } // Close the if (typeof ChatGPTController === 'undefined')
-// 
+} // Close the ChatGPTController class
+
+} // Close the if (typeof ChatGPTController === 'undefined')

@@ -29,18 +29,11 @@ window.addEventListener('semantest-response', (event) => {
   });
 });
 
-// Inject a helper script into MAIN world
+// Create a separate script file for the bridge helper
 const script = document.createElement('script');
-script.textContent = `
-  // Helper for MAIN world scripts to communicate
-  window.semantestBridge = {
-    sendToExtension: function(message) {
-      window.dispatchEvent(new CustomEvent('semantest-response', {
-        detail: message
-      }));
-    }
-  };
-  console.log('🌉 MAIN world bridge helper ready');
-`;
+script.src = chrome.runtime.getURL('src/content/bridge-helper.js');
+script.onload = () => {
+  console.log('🌉 Bridge helper script loaded');
+  script.remove();
+};
 document.head.appendChild(script);
-script.remove();

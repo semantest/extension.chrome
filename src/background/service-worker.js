@@ -188,15 +188,42 @@ class WebSocketHandler {
     const tab = tabs[0];
     console.log(`Found ChatGPT tab: ${tab.id}`);
     
-    // Send message to tab
-    chrome.tabs.sendMessage(tab.id, {
+    // Send message to tab with retry
+    const sendToTab = async (tabId, message, retries = 3) => {
+      for (let i = 0; i < retries; i++) {
+        try {
+          await chrome.tabs.sendMessage(tabId, message);
+          console.log('✅ Message sent to tab successfully');
+          return;
+        } catch (error) {
+          console.warn(`Attempt ${i + 1} failed:`, error.message);
+          if (i < retries - 1) {
+            // Wait a bit before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Try to inject content script if not already injected
+            try {
+              await chrome.scripting.executeScript({
+                target: { tabId },
+                files: ['src/content/chatgpt-bridge.js']
+              });
+              console.log('Injected bridge script');
+            } catch (e) {
+              // Script might already be injected
+            }
+          } else {
+            console.error('Failed to send to tab after retries:', error);
+          }
+        }
+      }
+    };
+    
+    await sendToTab(tab.id, {
       type: 'websocket:message',
       payload: {
         type: 'semantest/custom/image/download/requested',
         payload: payload
       }
-    }).catch(error => {
-      console.error('Failed to send to tab:', error);
     });
   }
 
