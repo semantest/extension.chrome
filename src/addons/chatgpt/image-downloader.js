@@ -10,6 +10,7 @@ let monitoringStartTime = null; // Track when monitoring started
 let initialImages = new Set(); // Track images that existed before monitoring
 let expectingImage = false; // Flag to indicate we're expecting a new image
 let initialCaptureComplete = false; // Flag to ensure initial capture is done
+let initialMessageCount = 0; // Track message count when monitoring started
 
 function startImageMonitoring() {
   if (monitoringActive) {
@@ -35,12 +36,21 @@ function startImageMonitoring() {
     existingImages.forEach(img => {
       if (img.src) {
         initialImages.add(img.src);
+        // Also add without query params to catch variations
+        const urlWithoutParams = img.src.split('?')[0];
+        initialImages.add(urlWithoutParams);
+        
         // Only log DALL-E type images
         if (img.src.includes('openai') || img.src.includes('dalle') || img.src.includes('blob:')) {
           console.log('📌 Marking existing DALL-E image:', img.src.substring(0, 50) + '...');
         }
       }
     });
+    
+    // Also capture message count at start
+    initialMessageCount = document.querySelectorAll('[data-testid="conversation-turn"]').length;
+    console.log(`📊 Initial message count: ${initialMessageCount}`);
+    
     initialCaptureComplete = true;
     console.log('✅ Initial image capture complete, now watching for NEW images only');
   }, 1000); // Wait 1 second for page to settle
@@ -178,7 +188,14 @@ function isGeneratedImage(img) {
   
   // Skip if this is an old image (existed before monitoring)
   if (initialImages.has(src)) {
-    console.log('🚫 Skipping pre-existing image from initial capture');
+    console.log('🚫 Skipping pre-existing image from initial capture (exact match)');
+    return false;
+  }
+  
+  // Also check without query params
+  const srcWithoutParams = src.split('?')[0];
+  if (initialImages.has(srcWithoutParams)) {
+    console.log('🚫 Skipping pre-existing image from initial capture (URL match)');
     return false;
   }
   
@@ -216,8 +233,11 @@ function isGeneratedImage(img) {
     const messageIndex = Array.from(allMessages).indexOf(messageContainer);
     const isRecent = messageIndex >= allMessages.length - 3; // One of last 3 messages
     
-    if (!isRecent) {
-      console.log('🚫 Ignoring image from old message (index:', messageIndex, 'of', allMessages.length, ')');
+    // Also check if this message appeared AFTER monitoring started
+    const isNewMessage = messageIndex >= initialMessageCount;
+    
+    if (!isRecent || !isNewMessage) {
+      console.log('🚫 Ignoring image from old message (index:', messageIndex, 'of', allMessages.length, ', initial:', initialMessageCount, ')');
       return false;
     }
   }

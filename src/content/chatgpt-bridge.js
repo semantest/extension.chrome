@@ -24,13 +24,22 @@ window.addEventListener('semantest-response', (event) => {
   console.log('🌉 Bridge received from MAIN world:', event.detail);
   
   // Check if chrome.runtime is still valid
-  if (chrome.runtime && chrome.runtime.id) {
-    // Forward to service worker
-    chrome.runtime.sendMessage(event.detail).catch(err => {
-      console.error('Failed to send to service worker:', err);
-    });
-  } else {
-    console.warn('⚠️ Extension context invalidated, cannot send message');
+  try {
+    if (chrome.runtime && chrome.runtime.id) {
+      // Forward to service worker
+      chrome.runtime.sendMessage(event.detail).catch(err => {
+        console.error('Failed to send to service worker:', err);
+        // If it's a context invalidated error, don't throw
+        if (err.message && err.message.includes('Extension context invalidated')) {
+          console.warn('⚠️ Extension context invalidated - this is expected if the extension was reloaded');
+        }
+      });
+    } else {
+      console.warn('⚠️ Extension context invalidated, cannot send message');
+    }
+  } catch (err) {
+    // Catch any errors from accessing chrome.runtime
+    console.warn('⚠️ Extension context error:', err.message);
   }
 });
 
