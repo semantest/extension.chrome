@@ -173,10 +173,15 @@ async function handleGeneratedImage(img) {
             downloaded: true,
             filename: result.filename,
             path: result.path,
-            size: result.size
+            size: result.size,
+            timestamp: Date.now()
           }
         });
       }
+      
+      // Also stop monitoring after successful download
+      console.log('✅ Download complete, stopping monitoring...');
+      stopImageMonitoring();
     }
   } catch (error) {
     console.error('❌ Failed to download image:', error);
@@ -245,14 +250,19 @@ async function downloadImage(img) {
   }
 }
 
-// Auto-start monitoring when loaded
-startImageMonitoring();
+// DON'T auto-start monitoring - wait for explicit request
+// startImageMonitoring();
 
 // Export functions
 window.chatGPTImageDownloader = {
   startImageMonitoring,
+  stopImageMonitoring,
   downloadImage,
-  checkForImages
+  checkForImages,
+  clearDownloadedImages: () => {
+    downloadedImages.clear();
+    console.log('🧹 Cleared downloaded images cache');
+  }
 };
 
-console.log('📥 Image Downloader ready - monitoring for generated images');
+console.log('📥 Image Downloader ready - waiting for image generation request');

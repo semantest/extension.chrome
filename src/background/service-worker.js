@@ -336,14 +336,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           
           // Forward the response back to WebSocket
           if (wsHandler && wsHandler.ws && wsHandler.ws.readyState === WebSocket.OPEN) {
-            wsHandler.send({
-              type: 'semantest/custom/image/response',
-              data: {
-                success: request.success,
-                result: request.result,
-                error: request.error
-              }
-            });
+            // Check if this is a download completion
+            if (request.result && request.result.downloaded) {
+              wsHandler.send({
+                type: 'semantest/custom/image/downloaded',
+                data: {
+                  success: true,
+                  path: request.result.path || request.result.filename,
+                  filename: request.result.filename,
+                  size: request.result.size,
+                  timestamp: request.result.timestamp
+                }
+              });
+            } else {
+              // Generic response
+              wsHandler.send({
+                type: 'semantest/custom/image/response',
+                data: {
+                  success: request.success,
+                  result: request.result,
+                  error: request.error
+                }
+              });
+            }
           }
           
           response = { success: true };
