@@ -121,7 +121,7 @@ class WebSocketHandler {
           type: 'subscribe',
           timestamp: Date.now(),
           payload: {
-            eventTypes: ['semantest/custom/image/request/received']
+            eventTypes: ['semantest/custom/image/download/requested']
           }
         }));
       };
@@ -139,8 +139,8 @@ class WebSocketHandler {
             const eventType = message.payload.type;
             const eventPayload = message.payload.payload;
             
-            if (eventType === 'semantest/custom/image/request/received') {
-              await this.handleImageRequest(eventPayload);
+            if (eventType === 'semantest/custom/image/download/requested') {
+              await this.handleImageDownloadRequest(eventPayload);
             }
           }
         } catch (error) {
@@ -172,8 +172,8 @@ class WebSocketHandler {
     }
   }
 
-  async handleImageRequest(payload) {
-    console.log('🎨 Handling image request:', payload);
+  async handleImageDownloadRequest(payload) {
+    console.log('🎨 Handling image download request:', payload);
     
     // Find ChatGPT tabs
     const tabs = await chrome.tabs.query({
@@ -192,7 +192,7 @@ class WebSocketHandler {
     chrome.tabs.sendMessage(tab.id, {
       type: 'websocket:message',
       payload: {
-        type: 'semantest/custom/image/request/received',
+        type: 'semantest/custom/image/download/requested',
         payload: payload
       }
     }).catch(error => {

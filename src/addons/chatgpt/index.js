@@ -18,8 +18,8 @@ async function initializeChatGPTAddon() {
       const eventType = message.payload.type;
       const eventPayload = message.payload.payload;
       
-      if (eventType === 'semantest/custom/image/request/received') {
-        console.log('🎨 ChatGPT Addon: Received image generation request:', eventPayload);
+      if (eventType === 'semantest/custom/image/download/requested') {
+        console.log('🎨 ChatGPT Addon: Received image download request:', eventPayload);
         
         // Extract the prompt
         const prompt = eventPayload?.prompt || eventPayload?.message || 'Generate an image';
