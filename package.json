@@ -33,24 +33,26 @@
   "bugs": "https://github.com/semantest/semantest/issues",
   "dependencies": {
     "@semantest/client": "file:../sdk/client",
-    "@semantest/core": "file:../sdk/core",
     "@semantest/contracts": "file:../sdk/contracts",
+    "@semantest/core": "file:../sdk/core",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "webextension-polyfill": "^0.10.0"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.268",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^24.1.0",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
     "@types/ws": "^8.5.10",
-    "@types/jest": "^29.5.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
     "jest": "^29.5.0",
-    "ts-jest": "^29.1.0",
+    "jest-environment-jsdom": "^30.0.5",
     "rimraf": "^5.0.5",
+    "ts-jest": "^29.1.0",
     "typescript": "^5.5.3"
   },
   "manifest": {

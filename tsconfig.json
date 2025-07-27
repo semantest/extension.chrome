@@ -4,7 +4,7 @@
     "module": "ES2020",
     "lib": ["ES2020", "DOM"],
     "outDir": "./build",
-    "rootDir": "./src",
+    "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -12,16 +12,15 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "types": ["chrome"]
+    "types": ["chrome", "jest", "node"]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "tests/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "build",
-    "**/*.test.ts",
-    "**/*.spec.ts",
     "src/advanced-training.ts",
     "src/chatgpt-background.ts",
     "src/training/**/*"

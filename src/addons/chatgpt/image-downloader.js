@@ -8,6 +8,7 @@ let monitoringActive = false;
 let checkInterval = null;
 let monitoringStartTime = null; // Track when monitoring started
 let initialImages = new Set(); // Track images that existed before monitoring
+let expectingImage = false; // Flag to indicate we're expecting a new image
 
 function startImageMonitoring() {
   if (monitoringActive) {
@@ -18,6 +19,7 @@ function startImageMonitoring() {
   console.log('👀 Starting enhanced image monitoring...');
   monitoringActive = true;
   monitoringStartTime = Date.now();
+  expectingImage = true; // We're expecting a new image
   
   // Clear any previous state
   downloadedImages.clear();
@@ -66,30 +68,49 @@ function startImageMonitoring() {
   
   // Method 2: Periodic check for images (backup method)
   // This catches images that might be loaded dynamically without DOM changes
+  let lastMessageCount = document.querySelectorAll('[data-testid="conversation-turn"]').length;
+  
   checkInterval = setInterval(() => {
-    console.log('🔍 Periodic image check...');
+    // Check if we're still expecting an image
+    if (!expectingImage) {
+      console.log('⏸️ Not expecting image anymore, skipping check');
+      return;
+    }
     
-    // Focus on the latest message in the conversation
-    const latestMessages = document.querySelectorAll('[data-testid="conversation-turn"]');
-    const lastMessage = latestMessages[latestMessages.length - 1];
+    // Check state detector if available
+    if (window.chatGPTStateDetector) {
+      const state = window.chatGPTStateDetector.getState();
+      if (state.isImageGenerating) {
+        console.log('🎨 Image is still generating...');
+        return; // Wait for it to complete
+      }
+    }
     
-    if (lastMessage) {
-      console.log('👁️ Checking latest message for images...');
-      checkForImages(lastMessage);
-    } else {
-      // Fallback to checking entire body
-      checkForImages(document.body);
+    // Only check if there are new messages
+    const currentMessages = document.querySelectorAll('[data-testid="conversation-turn"]');
+    const currentMessageCount = currentMessages.length;
+    
+    if (currentMessageCount > lastMessageCount) {
+      console.log('🔍 New message detected! Checking for images...');
+      
+      // Only check the NEW messages
+      for (let i = lastMessageCount; i < currentMessageCount; i++) {
+        checkForImages(currentMessages[i]);
+      }
+      
+      lastMessageCount = currentMessageCount;
     }
   }, 2000); // Check every 2 seconds
   
-  // Also check existing images immediately
-  checkForImages(document.body);
+  // DON'T check existing images immediately - wait for NEW ones only
+  // checkForImages(document.body);
   
-  // Stop monitoring after 2 minutes to avoid resource usage
+  // Stop monitoring after 3 minutes to accommodate slow image generation
+  // This should match or exceed the CLI timeout (currently 120s)
   setTimeout(() => {
     stopImageMonitoring();
-    console.log('⏱️ Stopped monitoring after 2 minutes');
-  }, 120000);
+    console.log('⏱️ Stopped monitoring after 3 minutes (timeout)');
+  }, 180000); // 3 minutes
 }
 
 function stopImageMonitoring() {
@@ -233,34 +254,44 @@ async function handleGeneratedImage(img) {
       console.log('✅ Image downloaded successfully:', result.filename);
       
       // Send response back through the bridge
-      if (window.semantestBridge) {
-        window.semantestBridge.sendToExtension({
-          type: 'addon:response',
-          success: true,
-          result: {
-            downloaded: true,
-            filename: result.filename,
-            path: result.path,
-            size: result.size,
-            timestamp: Date.now()
-          }
-        });
+      if (window.semantestBridge && window.semantestBridge.sendToExtension) {
+        try {
+          window.semantestBridge.sendToExtension({
+            type: 'addon:response',
+            success: true,
+            result: {
+              downloaded: true,
+              filename: result.filename,
+              path: result.path,
+              size: result.size,
+              timestamp: Date.now()
+            }
+          });
+        } catch (err) {
+          console.warn('⚠️ Could not send response to extension:', err.message);
+          // Continue anyway - download still succeeded
+        }
       }
       
       // Also stop monitoring after successful download
       console.log('✅ Download complete, stopping monitoring...');
+      expectingImage = false; // Reset flag
       stopImageMonitoring();
     }
   } catch (error) {
     console.error('❌ Failed to download image:', error);
     
     // Send error response
-    if (window.semantestBridge) {
-      window.semantestBridge.sendToExtension({
-        type: 'addon:response',
-        success: false,
-        error: error.message
-      });
+    if (window.semantestBridge && window.semantestBridge.sendToExtension) {
+      try {
+        window.semantestBridge.sendToExtension({
+          type: 'addon:response',
+          success: false,
+          error: error.message
+        });
+      } catch (err) {
+        console.warn('⚠️ Could not send error to extension:', err.message);
+      }
     }
   }
 }
