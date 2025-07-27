@@ -64,7 +64,18 @@ function startImageMonitoring() {
   // This catches images that might be loaded dynamically without DOM changes
   checkInterval = setInterval(() => {
     console.log('🔍 Periodic image check...');
-    checkForImages(document.body);
+    
+    // Focus on the latest message in the conversation
+    const latestMessages = document.querySelectorAll('[data-testid="conversation-turn"]');
+    const lastMessage = latestMessages[latestMessages.length - 1];
+    
+    if (lastMessage) {
+      console.log('👁️ Checking latest message for images...');
+      checkForImages(lastMessage);
+    } else {
+      // Fallback to checking entire body
+      checkForImages(document.body);
+    }
   }, 2000); // Check every 2 seconds
   
   // Also check existing images immediately
@@ -115,12 +126,19 @@ function isGeneratedImage(img) {
     return false;
   }
   
+  // Skip if this is an old image (existed before monitoring)
+  if (initialImages.has(src)) {
+    return false;
+  }
+  
   // DALL-E images typically have these characteristics
   const isDalleUrl = src.includes('dalle') || 
                      src.includes('openai') ||
                      src.includes('chatgpt') ||
                      src.includes('oaidalleapiprodscus.blob.core.windows.net') || // Azure blob storage
-                     src.includes('blob:'); // Local blob URLs
+                     src.includes('blob:') || // Local blob URLs
+                     src.includes('cdn.openai.com') || // CDN images
+                     src.includes('images.openai.com'); // New image service
   
   if (!isDalleUrl) {
     return false;
