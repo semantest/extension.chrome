@@ -484,6 +484,12 @@ async function enterImagePrompt(promptText) {
     console.log('🖱️ Clicking generate button...');
     generateButton.click();
     
+    // Start monitoring for the generated image
+    console.log('👀 Starting image monitoring for auto-download...');
+    if (window.chatGPTImageDownloader) {
+      window.chatGPTImageDownloader.startImageMonitoring();
+    }
+    
     return { 
       success: true, 
       message: 'Image generation started successfully',
