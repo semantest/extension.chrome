@@ -23,10 +23,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 window.addEventListener('semantest-response', (event) => {
   console.log('🌉 Bridge received from MAIN world:', event.detail);
   
-  // Forward to service worker
-  chrome.runtime.sendMessage(event.detail).catch(err => {
-    console.error('Failed to send to service worker:', err);
-  });
+  // Check if chrome.runtime is still valid
+  if (chrome.runtime && chrome.runtime.id) {
+    // Forward to service worker
+    chrome.runtime.sendMessage(event.detail).catch(err => {
+      console.error('Failed to send to service worker:', err);
+    });
+  } else {
+    console.warn('⚠️ Extension context invalidated, cannot send message');
+  }
 });
 
 // Create a separate script file for the bridge helper

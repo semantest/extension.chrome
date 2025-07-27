@@ -9,6 +9,7 @@ let checkInterval = null;
 let monitoringStartTime = null; // Track when monitoring started
 let initialImages = new Set(); // Track images that existed before monitoring
 let expectingImage = false; // Flag to indicate we're expecting a new image
+let initialCaptureComplete = false; // Flag to ensure initial capture is done
 
 function startImageMonitoring() {
   if (monitoringActive) {
@@ -24,22 +25,34 @@ function startImageMonitoring() {
   // Clear any previous state
   downloadedImages.clear();
   initialImages.clear();
+  initialCaptureComplete = false;
   
-  // Capture all existing images to ignore them
-  const existingImages = document.querySelectorAll('img');
-  console.log(`📊 Found ${existingImages.length} existing images`);
-  existingImages.forEach(img => {
-    if (img.src) {
-      initialImages.add(img.src);
-      // Only log DALL-E type images
-      if (img.src.includes('openai') || img.src.includes('dalle') || img.src.includes('blob:')) {
-        console.log('📌 Marking existing DALL-E image:', img.src.substring(0, 50) + '...');
+  // WAIT before capturing existing images to let page settle
+  setTimeout(() => {
+    // Capture all existing images to ignore them
+    const existingImages = document.querySelectorAll('img');
+    console.log(`📊 Found ${existingImages.length} existing images after delay`);
+    existingImages.forEach(img => {
+      if (img.src) {
+        initialImages.add(img.src);
+        // Only log DALL-E type images
+        if (img.src.includes('openai') || img.src.includes('dalle') || img.src.includes('blob:')) {
+          console.log('📌 Marking existing DALL-E image:', img.src.substring(0, 50) + '...');
+        }
       }
-    }
-  });
+    });
+    initialCaptureComplete = true;
+    console.log('✅ Initial image capture complete, now watching for NEW images only');
+  }, 1000); // Wait 1 second for page to settle
   
   // Method 1: MutationObserver for DOM changes
+  // IMPORTANT: Don't start observing until initial capture is complete
   imageObserver = new MutationObserver((mutations) => {
+    // Skip all mutations until initial capture is done
+    if (!initialCaptureComplete) {
+      return;
+    }
+    
     for (const mutation of mutations) {
       // Check added nodes
       for (const node of mutation.addedNodes) {
@@ -58,13 +71,16 @@ function startImageMonitoring() {
     }
   });
   
-  // Start observing with more options
-  imageObserver.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['src']
-  });
+  // Delay starting the observer until after initial capture
+  setTimeout(() => {
+    imageObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['src']
+    });
+    console.log('👁️ MutationObserver now active');
+  }, 1500); // Start observing after initial capture is done
   
   // Method 2: Periodic check for images (backup method)
   // This catches images that might be loaded dynamically without DOM changes
@@ -123,9 +139,18 @@ function stopImageMonitoring() {
     checkInterval = null;
   }
   monitoringActive = false;
+  expectingImage = false;
+  initialCaptureComplete = false;
+  console.log('🛑 Image monitoring stopped');
 }
 
 function checkForImages(element) {
+  // Don't check until initial capture is complete
+  if (!initialCaptureComplete) {
+    console.log('⏸️ Skipping check - initial capture not complete');
+    return;
+  }
+  
   // Direct image elements
   if (element.tagName === 'IMG' && isGeneratedImage(element)) {
     handleGeneratedImage(element);
@@ -153,6 +178,13 @@ function isGeneratedImage(img) {
   
   // Skip if this is an old image (existed before monitoring)
   if (initialImages.has(src)) {
+    console.log('🚫 Skipping pre-existing image from initial capture');
+    return false;
+  }
+  
+  // Additional safety: Only consider images that appear after we started monitoring
+  if (!monitoringStartTime) {
+    console.log('🚫 Monitoring not started yet');
     return false;
   }
   
