@@ -6,6 +6,8 @@ let imageObserver = null;
 let downloadedImages = new Set(); // Track downloaded images to avoid duplicates
 let monitoringActive = false;
 let checkInterval = null;
+let monitoringStartTime = null; // Track when monitoring started
+let initialImages = new Set(); // Track images that existed before monitoring
 
 function startImageMonitoring() {
   if (monitoringActive) {
@@ -15,6 +17,20 @@ function startImageMonitoring() {
   
   console.log('👀 Starting enhanced image monitoring...');
   monitoringActive = true;
+  monitoringStartTime = Date.now();
+  
+  // Clear any previous state
+  downloadedImages.clear();
+  initialImages.clear();
+  
+  // Capture all existing images to ignore them
+  const existingImages = document.querySelectorAll('img');
+  existingImages.forEach(img => {
+    if (img.src) {
+      initialImages.add(img.src);
+      console.log('📌 Marking existing image:', img.src.substring(0, 50) + '...');
+    }
+  });
   
   // Method 1: MutationObserver for DOM changes
   imageObserver = new MutationObserver((mutations) => {
@@ -149,6 +165,12 @@ async function handleGeneratedImage(img) {
   // Skip if already downloaded
   if (downloadedImages.has(src)) {
     console.log('⏭️ Image already downloaded:', src.substring(0, 50) + '...');
+    return;
+  }
+  
+  // Skip if this image existed before monitoring started
+  if (initialImages.has(src)) {
+    console.log('⏭️ Skipping pre-existing image:', src.substring(0, 50) + '...');
     return;
   }
   
