@@ -105,7 +105,8 @@ class ChatGPTController {
   }
 
   setupMessageListener() {
-//     Note: chrome.runtime not available in MAIN world
+    // Note: chrome.runtime not available in MAIN world
+  }
 // chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 //       console.log('ChatGPTController received message:', request.action);
 //       
@@ -997,5 +998,9 @@ class ChatGPTController {
 // }
 // 
 } // Close the ChatGPTController class
+
+// Initialize the controller
+window.chatGPTController = new ChatGPTController();
+console.log('✅ ChatGPT Controller initialized');
 
 } // Close the if (typeof ChatGPTController === 'undefined')
