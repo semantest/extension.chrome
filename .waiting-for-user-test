@@ -45,3 +45,4 @@ Blocked status: 22:55 - 90+ minutes waiting for user test of bridge fix
 2025-07-27 10:18:40 - 🚀 FIXES DEPLOYED #51: Timeout fix + addon detection fix. Ready for re-test!
 2025-07-27 10:28:43 - Safety commit #52. Awaiting user re-test of timeout fix. Image download pending.
 2025-07-27 10:38:47 - Checkpoint #53. Working directory reminder acknowledged. Timeout fix ready for test.
+2025-07-27 10:48:51 - Save point #54. Still awaiting user re-test. Extension stable with timeout fix deployed.
