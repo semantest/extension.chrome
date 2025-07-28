@@ -285,11 +285,11 @@ export class MemoryMonitor {
     jsHeapSizeLimit: number;
     percentUsed: number;
   } | null {
-    if (!performance.memory) {
+    if (!(performance as any).memory) {
       return null;
     }
     
-    const { usedJSHeapSize, totalJSHeapSize, jsHeapSizeLimit } = performance.memory;
+    const { usedJSHeapSize, totalJSHeapSize, jsHeapSizeLimit } = (performance as any).memory;
     
     return {
       usedJSHeapSize: Math.round(usedJSHeapSize / 1024 / 1024), // MB

@@ -16,13 +16,14 @@ import {
 } from './index';
 
 // Mock performance.memory
+const mockMemory = {
+  usedJSHeapSize: 50 * 1024 * 1024, // 50 MB
+  totalJSHeapSize: 100 * 1024 * 1024, // 100 MB
+  jsHeapSizeLimit: 2048 * 1024 * 1024 // 2 GB
+};
+
 Object.defineProperty(performance, 'memory', {
-  value: {
-    usedJSHeapSize: 50 * 1024 * 1024, // 50 MB
-    totalJSHeapSize: 100 * 1024 * 1024, // 100 MB
-    jsHeapSizeLimit: 2048 * 1024 * 1024 // 2 GB
-  },
-  writable: true,
+  get: () => mockMemory,
   configurable: true
 });
 
@@ -423,7 +424,12 @@ describe('BatchProcessor', () => {
 
 describe('MemoryMonitor', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     jest.spyOn(console, 'warn').mockImplementation();
+    // Reset mock memory to default values
+    mockMemory.usedJSHeapSize = 50 * 1024 * 1024;
+    mockMemory.totalJSHeapSize = 100 * 1024 * 1024;
+    mockMemory.jsHeapSizeLimit = 2048 * 1024 * 1024;
   });
 
   afterEach(() => {
@@ -443,9 +449,9 @@ describe('MemoryMonitor', () => {
     });
 
     it('should return null when performance.memory is not available', () => {
-      const originalMemory = (performance as any).memory;
+      // Temporarily remove memory property
       Object.defineProperty(performance, 'memory', {
-        value: undefined,
+        get: () => undefined,
         configurable: true
       });
       
@@ -453,8 +459,9 @@ describe('MemoryMonitor', () => {
       
       expect(usage).toBeNull();
       
+      // Restore mock
       Object.defineProperty(performance, 'memory', {
-        value: originalMemory,
+        get: () => mockMemory,
         configurable: true
       });
     });
@@ -467,14 +474,9 @@ describe('MemoryMonitor', () => {
       const stop = MemoryMonitor.startMonitoring(1000);
       
       // Set high memory usage
-      Object.defineProperty(performance, 'memory', {
-        value: {
-          usedJSHeapSize: 1800 * 1024 * 1024,
-          totalJSHeapSize: 2000 * 1024 * 1024,
-          jsHeapSizeLimit: 2048 * 1024 * 1024
-        },
-        configurable: true
-      });
+      mockMemory.usedJSHeapSize = 1800 * 1024 * 1024;
+      mockMemory.totalJSHeapSize = 2000 * 1024 * 1024;
+      mockMemory.jsHeapSizeLimit = 2048 * 1024 * 1024;
       
       jest.advanceTimersByTime(1000);
       
