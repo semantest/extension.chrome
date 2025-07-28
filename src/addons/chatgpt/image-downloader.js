@@ -386,21 +386,41 @@ async function downloadImage(img) {
         size: blob.size
       };
     } else {
-      // For regular URLs, use direct download
-      const a = document.createElement('a');
-      a.href = src;
-      a.download = filename;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      // For regular URLs, we need to fetch and convert to blob first
+      // Direct download doesn't work for cross-origin URLs
+      console.log('📥 Fetching image from URL:', src.substring(0, 50) + '...');
       
-      return {
-        success: true,
-        filename: filename,
-        path: `~/Downloads/${filename}`, // Approximate path
-        size: 0 // Unknown for direct URLs
-      };
+      try {
+        const response = await fetch(src);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        
+        // Now download the blob
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.style.display = 'none';
+        a.target = '_blank'; // Extra safety
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Clean up
+        setTimeout(() => URL.revokeObjectURL(a.href), 100);
+        
+        return {
+          success: true,
+          filename: filename,
+          path: `~/Downloads/${filename}`, // Approximate path
+          size: blob.size
+        };
+      } catch (error) {
+        console.error('❌ Failed to fetch image:', error);
+        throw new Error(`Download failed: ${error.message}`);
+      }
     }
   } catch (error) {
     throw new Error(`Download failed: ${error.message}`);
