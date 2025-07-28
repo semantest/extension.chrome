@@ -1,6 +1,11 @@
 # QA Marathon Coverage Summary
 
-## Current Overall Coverage: ~56.76%
+## Current Overall Coverage: ~56.76% (when all tests run)
+## Passing Tests Coverage: 20.99% (185 passing tests)
+
+### Coverage by Folder:
+- **src folder**: 46.54% coverage
+- **shared/patterns folder**: 95.19% coverage!
 
 ### High-Coverage Files Achieved:
 
