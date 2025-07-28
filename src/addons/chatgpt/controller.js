@@ -103,6 +103,21 @@ class ChatGPTController {
     console.log('✅ ChatGPT loaded, input found');
     return input;
   }
+  
+  // Helper method to wait for element
+  async waitForSelector(selector, timeout = 10000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+      const element = document.querySelector(selector);
+      if (element) {
+        return element;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    return null;
+  }
 
   sendMessage(message) {
     // Since we're in MAIN world, use custom event instead of chrome.runtime
