@@ -63,10 +63,17 @@ function startImageMonitoring() {
       return;
     }
     
+    console.log(`👁️ MutationObserver triggered: ${mutations.length} mutations`);
+    
     for (const mutation of mutations) {
       // Check added nodes
       for (const node of mutation.addedNodes) {
         if (node.nodeType === Node.ELEMENT_NODE) {
+          // Log if this element contains images
+          const hasImg = node.tagName === 'IMG' || (node.querySelectorAll && node.querySelectorAll('img').length > 0);
+          if (hasImg) {
+            console.log('🆕 New element with images:', node.tagName, node.className || 'no-class');
+          }
           // Check if it's an image or contains images
           checkForImages(node);
         }
@@ -75,6 +82,7 @@ function startImageMonitoring() {
       // Also check if existing images changed src
       if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
         if (mutation.target.tagName === 'IMG') {
+          console.log('🔄 Image src changed:', mutation.target.src);
           checkForImages(mutation.target);
         }
       }
@@ -193,8 +201,17 @@ function isGeneratedImage(img) {
   // Check if this is a DALL-E generated image
   const src = img.src || '';
   
+  console.log('🔍 isGeneratedImage checking:', {
+    src: src.substring(0, 80),
+    tagName: img.tagName,
+    complete: img.complete,
+    width: img.width,
+    naturalWidth: img.naturalWidth
+  });
+  
   // Skip if no source or if it's a data URL (base64)
   if (!src || src.startsWith('data:')) {
+    console.log('❌ Skipped: No src or data URL');
     return false;
   }
   
@@ -241,7 +258,18 @@ function isGeneratedImage(img) {
                      src.includes('oaiusercontent.com') || // NEW: DALL-E 3 URLs!
                      src.includes('sdmntpr'); // NEW: DALL-E 3 pattern
   
+  console.log('🎯 URL check:', {
+    isDalleUrl,
+    urlPatterns: {
+      dalle: src.includes('dalle'),
+      openai: src.includes('openai'),
+      oaiusercontent: src.includes('oaiusercontent.com'),
+      blob: src.includes('blob:')
+    }
+  });
+  
   if (!isDalleUrl) {
+    console.log('❌ Not a DALL-E URL pattern');
     return false;
   }
   
@@ -280,9 +308,19 @@ function isGeneratedImage(img) {
   const hasAlt = img.alt && (img.alt.includes('Generated') || img.alt.includes('DALL'));
   const hasTitle = img.title && (img.title.includes('Generated') || img.title.includes('DALL'));
   
+  console.log('📍 Location check:', {
+    isInChat,
+    messageContainer: !!messageContainer,
+    sizeOk,
+    minSize,
+    hasAlt,
+    hasTitle,
+    containerClasses: img.parentElement?.className || 'no-parent-class'
+  });
+  
   // If it passes basic checks and is in chat area
   if (isInChat && (sizeOk || hasAlt || hasTitle)) {
-    console.log('🎯 Detected generated image:', {
+    console.log('✅✅ DETECTED GENERATED IMAGE:', {
       src: src.substring(0, 50) + '...',
       width: img.naturalWidth || img.width,
       height: img.naturalHeight || img.height,
@@ -292,6 +330,7 @@ function isGeneratedImage(img) {
     return true;
   }
   
+  console.log('❌ Failed final check:', { isInChat, sizeOk, hasAlt, hasTitle });
   return false;
 }
 
@@ -453,6 +492,42 @@ async function downloadImage(img) {
 // DON'T auto-start monitoring - wait for explicit request
 // startImageMonitoring();
 
+// Debug function to manually check all images
+function debugCheckAllImages() {
+  console.log('🔍 DEBUG: Checking all images on page...');
+  const allImages = document.querySelectorAll('img');
+  console.log(`Found ${allImages.length} total images`);
+  
+  let dalleImages = 0;
+  allImages.forEach((img, index) => {
+    const src = img.src || '';
+    if (src.includes('oaiusercontent') || src.includes('dalle') || src.includes('openai')) {
+      dalleImages++;
+      console.log(`🎯 DALL-E Image ${dalleImages}:`, {
+        index,
+        src: src.substring(0, 100),
+        width: img.width,
+        height: img.height,
+        alt: img.alt,
+        complete: img.complete,
+        inMessage: !!img.closest('[data-testid="conversation-turn"]'),
+        parent: img.parentElement?.className
+      });
+      
+      // Try to check this image
+      console.log('🔍 Running isGeneratedImage check...');
+      const result = isGeneratedImage(img);
+      console.log('Result:', result);
+      
+      if (result) {
+        console.log('✅ Would download this image!');
+      }
+    }
+  });
+  
+  console.log(`\n📊 Summary: ${dalleImages} potential DALL-E images found`);
+}
+
 // Export functions
 window.chatGPTImageDownloader = {
   startImageMonitoring,
@@ -462,7 +537,11 @@ window.chatGPTImageDownloader = {
   clearDownloadedImages: () => {
     downloadedImages.clear();
     console.log('🧹 Cleared downloaded images cache');
-  }
+  },
+  debugCheckAllImages,
+  isGeneratedImage, // Export for debugging
+  handleGeneratedImage // Export for debugging
 };
 
 console.log('📥 Image Downloader ready - waiting for image generation request');
+console.log('🔍 Debug with: window.chatGPTImageDownloader.debugCheckAllImages()');

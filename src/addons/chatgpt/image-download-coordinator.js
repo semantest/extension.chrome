@@ -20,10 +20,16 @@ if (window.chatGPTStateDetector) {
       setTimeout(() => {
         // Find and download any new DALL-E images
         const images = document.querySelectorAll('img');
-        images.forEach(img => {
+        console.log(`🎯 Coordinator: Found ${images.length} images to check`);
+        
+        images.forEach((img, index) => {
+          console.log(`🎯 Checking image ${index}:`, img.src?.substring(0, 80));
+          
           if (window.chatGPTImageDownloader && 
               window.chatGPTImageDownloader.checkForImages) {
             window.chatGPTImageDownloader.checkForImages(img);
+          } else {
+            console.error('❌ chatGPTImageDownloader not available!');
           }
         });
       }, 500);
