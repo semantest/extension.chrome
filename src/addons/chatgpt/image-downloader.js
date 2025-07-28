@@ -28,34 +28,10 @@ function startImageMonitoring() {
   initialImages.clear();
   initialCaptureComplete = false;
   
-  // Get the current message count BEFORE any new generation
-  const currentMessageCount = document.querySelectorAll('[data-testid="conversation-turn"]').length;
-  
-  // IMPORTANT: Don't capture existing images immediately!
-  // We're expecting a NEW image to be generated, so we should only
-  // capture images that existed BEFORE the generation started.
-  // Since this is called AFTER clicking generate, we need to be smarter.
-  
-  // Get the last message's images (if any) to exclude them
-  const messages = document.querySelectorAll('[data-testid="conversation-turn"]');
-  const lastMessage = messages[messages.length - 1];
-  if (lastMessage) {
-    const lastMessageImages = lastMessage.querySelectorAll('img');
-    console.log(`📊 Last message has ${lastMessageImages.length} images`);
-    lastMessageImages.forEach(img => {
-      if (img.src && img.src.includes('oaiusercontent')) {
-        initialImages.add(img.src);
-        const urlWithoutParams = img.src.split('?')[0];
-        initialImages.add(urlWithoutParams);
-        console.log('📌 Excluding last message image:', img.src.substring(0, 50) + '...');
-      }
-    });
-  }
-  
-  // Mark as ready immediately since we're expecting a NEW image
-  initialMessageCount = currentMessageCount;
+  // Mark as ready immediately - we're looking for NEW images only
+  initialMessageCount = document.querySelectorAll('[data-testid="conversation-turn"]').length;
   initialCaptureComplete = true;
-  console.log('✅ Ready to detect NEW generated images only');
+  console.log('✅ Image monitoring started');
   
   // Method 1: MutationObserver for DOM changes
   // IMPORTANT: Don't start observing until initial capture is complete
@@ -65,26 +41,20 @@ function startImageMonitoring() {
       return;
     }
     
-    console.log(`👁️ MutationObserver triggered: ${mutations.length} mutations`);
-    
     for (const mutation of mutations) {
       // Check added nodes
       for (const node of mutation.addedNodes) {
         if (node.nodeType === Node.ELEMENT_NODE) {
-          // Log if this element contains images
-          const hasImg = node.tagName === 'IMG' || (node.querySelectorAll && node.querySelectorAll('img').length > 0);
-          if (hasImg) {
-            console.log('🆕 New element with images:', node.tagName, node.className || 'no-class');
-          }
           // Check if it's an image or contains images
-          checkForImages(node);
+          if (node.tagName === 'IMG' || (node.querySelectorAll && node.querySelectorAll('img').length > 0)) {
+            checkForImages(node);
+          }
         }
       }
       
       // Also check if existing images changed src
       if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
         if (mutation.target.tagName === 'IMG') {
-          console.log('🔄 Image src changed:', mutation.target.src);
           checkForImages(mutation.target);
         }
       }
@@ -167,22 +137,15 @@ function stopImageMonitoring() {
 }
 
 function checkForImages(element) {
-  console.log('🔎 checkForImages called for:', element.tagName, element.className || 'no-class');
-  
   // Don't check until initial capture is complete
   if (!initialCaptureComplete) {
-    console.log('⏸️ Skipping check - initial capture not complete');
     return;
   }
   
   // Direct image elements
   if (element.tagName === 'IMG') {
-    console.log('📸 Checking IMG element...');
     if (isGeneratedImage(element)) {
-      console.log('✅ Image passed isGeneratedImage check!');
       handleGeneratedImage(element);
-    } else {
-      console.log('❌ Image failed isGeneratedImage check');
     }
   }
   
@@ -201,36 +164,13 @@ function isGeneratedImage(img) {
   // Check if this is a DALL-E generated image
   const src = img.src || '';
   
-  console.log('🔍 isGeneratedImage checking:', {
-    src: src.substring(0, 80),
-    tagName: img.tagName,
-    complete: img.complete,
-    width: img.width,
-    naturalWidth: img.naturalWidth
-  });
-  
   // Skip if no source or if it's a data URL (base64)
   if (!src || src.startsWith('data:')) {
-    console.log('❌ Skipped: No src or data URL');
     return false;
   }
   
-  // Skip if this is an old image (existed before monitoring)
-  if (initialImages.has(src)) {
-    console.log('🚫 Skipping pre-existing image from initial capture (exact match)');
-    return false;
-  }
-  
-  // Also check without query params
-  const srcWithoutParams = src.split('?')[0];
-  if (initialImages.has(srcWithoutParams)) {
-    console.log('🚫 Skipping pre-existing image from initial capture (URL match)');
-    return false;
-  }
-  
-  // Additional safety: Only consider images that appear after we started monitoring
-  if (!monitoringStartTime) {
-    console.log('🚫 Monitoring not started yet');
+  // Skip if already downloaded
+  if (downloadedImages.has(src)) {
     return false;
   }
   
@@ -258,18 +198,7 @@ function isGeneratedImage(img) {
                      src.includes('oaiusercontent.com') || // NEW: DALL-E 3 URLs!
                      src.includes('sdmntpr'); // NEW: DALL-E 3 pattern
   
-  console.log('🎯 URL check:', {
-    isDalleUrl,
-    urlPatterns: {
-      dalle: src.includes('dalle'),
-      openai: src.includes('openai'),
-      oaiusercontent: src.includes('oaiusercontent.com'),
-      blob: src.includes('blob:')
-    }
-  });
-  
   if (!isDalleUrl) {
-    console.log('❌ Not a DALL-E URL pattern');
     return false;
   }
   
@@ -280,22 +209,8 @@ function isGeneratedImage(img) {
                    img.closest('[class*="result"]') ||
                    img.closest('div[class*="markdown"]');
   
-  // Additional check: is this in a recent message (not from scrolled history)?
+  // Simple check: is this in a message?
   const messageContainer = img.closest('[data-testid="conversation-turn"]');
-  if (messageContainer) {
-    // Check if this is one of the last few messages (not from scrolled history)
-    const allMessages = document.querySelectorAll('[data-testid="conversation-turn"]');
-    const messageIndex = Array.from(allMessages).indexOf(messageContainer);
-    const isRecent = messageIndex >= allMessages.length - 3; // One of last 3 messages
-    
-    // Also check if this message appeared AFTER monitoring started
-    const isNewMessage = messageIndex >= initialMessageCount;
-    
-    if (!isRecent || !isNewMessage) {
-      console.log('🚫 Ignoring image from old message (index:', messageIndex, 'of', allMessages.length, ', initial:', initialMessageCount, ')');
-      return false;
-    }
-  }
   
   // Check minimum size (generated images are usually larger)
   // Note: naturalWidth/Height might be 0 if image is still loading
@@ -308,50 +223,24 @@ function isGeneratedImage(img) {
   const hasAlt = img.alt && (img.alt.includes('Generated') || img.alt.includes('DALL'));
   const hasTitle = img.title && (img.title.includes('Generated') || img.title.includes('DALL'));
   
-  console.log('📍 Location check:', {
-    isInChat,
-    messageContainer: !!messageContainer,
-    sizeOk,
-    minSize,
-    hasAlt,
-    hasTitle,
-    containerClasses: img.parentElement?.className || 'no-parent-class'
-  });
-  
   // If it passes basic checks and is in chat area
   if (isInChat && (sizeOk || hasAlt || hasTitle)) {
-    console.log('✅✅ DETECTED GENERATED IMAGE:', {
-      src: src.substring(0, 50) + '...',
-      width: img.naturalWidth || img.width,
-      height: img.naturalHeight || img.height,
-      alt: img.alt,
-      inChat: isInChat
-    });
+    console.log('✅ Detected generated image:', src.substring(0, 50) + '...');
     return true;
   }
   
-  console.log('❌ Failed final check:', { isInChat, sizeOk, hasAlt, hasTitle });
   return false;
 }
 
 async function handleGeneratedImage(img) {
   const src = img.src;
   
-  console.log('🔍 handleGeneratedImage called for:', src.substring(0, 50) + '...');
-  
   // Skip if already downloaded
   if (downloadedImages.has(src)) {
-    console.log('⏭️ Image already downloaded:', src.substring(0, 50) + '...');
     return;
   }
   
-  // Skip if this image existed before monitoring started
-  if (initialImages.has(src)) {
-    console.log('⏭️ Skipping pre-existing image:', src.substring(0, 50) + '...');
-    return;
-  }
-  
-  console.log('🖼️ Found NEW generated image:', src.substring(0, 50) + '...');
+  console.log('🖼️ Downloading generated image:', src.substring(0, 50) + '...');
   
   // Wait for image to fully load if needed
   if (!img.complete) {
