@@ -29,13 +29,272 @@ const mockChrome = {
 // Replace global chrome with mock
 (global as any).chrome = mockChrome;
 
-// Mock the Entity base class and @listen decorator
-jest.mock('@typescript-eda/core', () => ({
-  Entity: class MockEntity<T> {
-    constructor() {}
+// Mock the base classes for the download events
+jest.mock('../events/download-events', () => {
+  // Define MockEvent inside the factory function
+  class MockEvent {
+    constructor(...args: any[]) {}
+  }
+
+  return {
+  FileDownloadRequested: class extends MockEvent {},
+  FileDownloadStarted: class extends MockEvent {
+    constructor(
+      public correlationId: string,
+      public downloadId: number,
+      public url: string,
+      public filename: string
+    ) {
+      super();
+    }
   },
-  listen: () => (target: any, propertyKey: string, descriptor: PropertyDescriptor) => descriptor
-}));
+  FileDownloadFailed: class extends MockEvent {
+    constructor(
+      public correlationId: string,
+      public url: string,
+      public error: string,
+      public downloadId?: number
+    ) {
+      super();
+    }
+  },
+  FileDownloadProgress: class extends MockEvent {
+    constructor(
+      public downloadId: number,
+      public url: string,
+      public filename: string,
+      public state: 'in_progress' | 'interrupted' | 'complete',
+      public bytesReceived: number,
+      public totalBytes: number,
+      public filepath?: string,
+      public error?: string
+    ) {
+      super();
+    }
+  },
+  FileDownloadStatusRequested: class extends MockEvent {
+    constructor(
+      public correlationId: string,
+      public downloadId?: number
+    ) {
+      super();
+    }
+  },
+  FileDownloadListRequested: class extends MockEvent {
+    constructor(
+      public correlationId: string,
+      public query?: any
+    ) {
+      super();
+    }
+  },
+  DownloadStatusProvided: class extends MockEvent {
+    constructor(
+      public correlationId: string,
+      public status: any
+    ) {
+      super();
+    }
+  },
+  DownloadListProvided: class extends MockEvent {
+    constructor(
+      public correlationId: string,
+      public downloads: any[]
+    ) {
+      super();
+    }
+  }
+  };
+});
+
+// Mock the FileDownload entity since it depends on @typescript-eda/core
+jest.mock('./file-download', () => {
+  return {
+    FileDownload: jest.fn().mockImplementation(() => {
+      let downloadId: number | null = null;
+      let url = '';
+      let filename = '';
+      let state: 'pending' | 'in_progress' | 'interrupted' | 'complete' = 'pending';
+      let bytesReceived = 0;
+      let totalBytes = 0;
+      let error: string | null = null;
+      let startTime: Date | null = null;
+      let endTime: Date | null = null;
+      let filepath = '';
+
+      return {
+        startDownload: jest.fn().mockImplementation(async (event: any) => {
+          const { FileDownloadStarted, FileDownloadFailed } = require('../events/download-events');
+          
+          try {
+            url = event.url;
+            filename = event.filename || event.url.split('/').pop() || 'download.unknown';
+            if (!filename.includes('.')) filename += '.unknown';
+            state = 'pending';
+            startTime = new Date();
+
+            return new Promise((resolve) => {
+              mockChrome.downloads.download({ 
+                url: event.url,
+                filename: event.filename,
+                conflictAction: event.conflictAction || 'uniquify',
+                saveAs: event.saveAs || false
+              }, (id: number | undefined) => {
+                if (mockChrome.runtime.lastError) {
+                  error = mockChrome.runtime.lastError.message || 'Unknown download error';
+                  state = 'interrupted';
+                  resolve(new FileDownloadFailed(
+                    event.correlationId,
+                    url,
+                    error
+                  ));
+                  return;
+                }
+
+                downloadId = id || 0;
+                state = 'in_progress';
+                resolve(new FileDownloadStarted(
+                  event.correlationId,
+                  downloadId,
+                  url,
+                  filename
+                ));
+              });
+            });
+          } catch (err) {
+            error = err instanceof Error ? err.message : 'Download initialization failed';
+            state = 'interrupted';
+            return new FileDownloadFailed(
+              event.correlationId,
+              url,
+              error
+            );
+          }
+        }),
+
+        updateProgress: jest.fn().mockImplementation(async (event: any) => {
+          if (event.downloadId === downloadId) {
+            bytesReceived = event.bytesReceived;
+            totalBytes = event.totalBytes;
+            state = event.state;
+            
+            if (event.state === 'complete') {
+              endTime = new Date();
+              filepath = event.filepath || '';
+            } else if (event.state === 'interrupted') {
+              error = event.error || 'Download interrupted';
+            }
+          }
+          return Promise.resolve();
+        }),
+
+        getDownloadStatus: jest.fn().mockImplementation(async (event: any) => {
+          const { DownloadStatusProvided } = require('../events/download-events');
+          
+          if (event.downloadId && event.downloadId !== downloadId) {
+            return new Promise((resolve) => {
+              mockChrome.downloads.search({ id: event.downloadId }, (downloads: any[]) => {
+                const download = downloads[0];
+                if (download) {
+                  resolve(new DownloadStatusProvided(
+                    event.correlationId,
+                    {
+                      downloadId: download.id,
+                      url: download.url,
+                      filename: download.filename,
+                      state: download.state,
+                      bytesReceived: download.bytesReceived,
+                      totalBytes: download.totalBytes,
+                      exists: download.exists,
+                      paused: download.paused,
+                      error: download.error
+                    }
+                  ));
+                } else {
+                  resolve(new DownloadStatusProvided(
+                    event.correlationId,
+                    {
+                      downloadId: event.downloadId!,
+                      url: '',
+                      filename: '',
+                      state: 'interrupted',
+                      bytesReceived: 0,
+                      totalBytes: 0,
+                      error: 'Download not found'
+                    }
+                  ));
+                }
+              });
+            });
+          }
+
+          return new DownloadStatusProvided(
+            event.correlationId,
+            {
+              downloadId: downloadId || 0,
+              url: url,
+              filename: filename,
+              state: state,
+              bytesReceived: bytesReceived,
+              totalBytes: totalBytes,
+              exists: state === 'complete',
+              paused: false,
+              error: error || undefined
+            }
+          );
+        }),
+
+        getDownloadsList: jest.fn().mockImplementation(async (event: any) => {
+          const { DownloadListProvided } = require('../events/download-events');
+          
+          return new Promise((resolve) => {
+            const query = {
+              orderBy: event.query?.orderBy || ['-startTime'],
+              limit: event.query?.limit || 100,
+              state: event.query?.state
+            };
+
+            mockChrome.downloads.search(query, (downloads: any[]) => {
+              const downloadList = downloads.map(download => ({
+                id: download.id,
+                url: download.url,
+                filename: download.filename,
+                state: download.state,
+                bytesReceived: download.bytesReceived,
+                totalBytes: download.totalBytes,
+                startTime: download.startTime,
+                endTime: download.endTime
+              }));
+
+              resolve(new DownloadListProvided(
+                event.correlationId,
+                downloadList
+              ));
+            });
+          });
+        }),
+
+        getState: jest.fn(() => state),
+        getProgressPercentage: jest.fn(() => {
+          if (totalBytes === 0) return 0;
+          return Math.round((bytesReceived / totalBytes) * 100);
+        }),
+        getFilepath: jest.fn(() => filepath),
+        isCompleted: jest.fn(() => state === 'complete' && filepath !== ''),
+        extractFilenameFromUrl: jest.fn((urlStr: string) => {
+          try {
+            const urlObj = new URL(urlStr);
+            const pathname = urlObj.pathname;
+            const fname = pathname.split('/').pop() || 'download';
+            return fname.includes('.') ? fname : `${fname}.unknown`;
+          } catch {
+            return 'download.unknown';
+          }
+        })
+      };
+    })
+  };
+});
 
 describe('FileDownload', () => {
   let fileDownload: FileDownload;

@@ -104,6 +104,23 @@ class ChatGPTController {
     return input;
   }
 
+  sendMessage(message) {
+    // Since we're in MAIN world, use custom event instead of chrome.runtime
+    try {
+      console.log('📤 Controller sending message:', message.type);
+      if (window.semantestBridge && window.semantestBridge.sendToExtension) {
+        window.semantestBridge.sendToExtension(message);
+      } else {
+        // Fallback: dispatch custom event
+        window.dispatchEvent(new CustomEvent('semantest-response', {
+          detail: message
+        }));
+      }
+    } catch (error) {
+      console.error('❌ Failed to send message:', error);
+    }
+  }
+
   setupMessageListener() {
     // Note: chrome.runtime not available in MAIN world
   }
