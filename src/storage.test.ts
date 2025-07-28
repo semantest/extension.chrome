@@ -568,6 +568,108 @@ describe('WebBuddyStorage', () => {
     });
   });
 
+  describe('Advanced Filtering Tests', () => {
+    beforeEach(async () => {
+      await storage.init();
+    });
+
+    test('should filter automation patterns by action', async () => {
+      const mockPatterns = [
+        { id: 'p1', action: 'click', timestamp: 1000 },
+        { id: 'p2', action: 'submit', timestamp: 2000 },
+        { id: 'p3', action: 'click', timestamp: 3000 },
+      ];
+      
+      mockIDBIndex.getAll.mockImplementation(() => {
+        const request = { ...mockIDBRequest };
+        setTimeout(() => {
+          request.result = mockPatterns.filter(p => p.action === 'click');
+          if (request.onsuccess) request.onsuccess();
+        }, 0);
+        return request;
+      });
+
+      const result = await storage.getAutomationPatterns({ action: 'click' });
+
+      expect(result).toHaveLength(2);
+      expect(mockIDBObjectStore.index).toHaveBeenCalledWith('action');
+      expect(mockIDBIndex.getAll).toHaveBeenCalledWith('click');
+    });
+
+    test('should filter automation patterns by URL substring', async () => {
+      const mockPatterns = [
+        { id: 'p1', url: 'https://example.com/page1', timestamp: 1000 },
+        { id: 'p2', url: 'https://other.com/page', timestamp: 2000 },
+        { id: 'p3', url: 'https://example.com/page2', timestamp: 3000 },
+      ];
+      
+      mockIDBObjectStore.getAll.mockImplementation(() => {
+        const request = { ...mockIDBRequest };
+        setTimeout(() => {
+          request.result = mockPatterns;
+          if (request.onsuccess) request.onsuccess();
+        }, 0);
+        return request;
+      });
+
+      const result = await storage.getAutomationPatterns({ url: 'example.com' });
+
+      expect(result).toHaveLength(2);
+      expect(result[0].url).toContain('example.com');
+      expect(result[1].url).toContain('example.com');
+    });
+
+    test('should filter user interactions by domain', async () => {
+      const mockInteractions = [
+        { id: 'i1', domain: 'example.com', timestamp: 1000 },
+        { id: 'i2', domain: 'other.com', timestamp: 2000 },
+      ];
+      
+      mockIDBIndex.getAll.mockImplementation(() => {
+        const request = { ...mockIDBRequest };
+        setTimeout(() => {
+          request.result = mockInteractions.filter(i => i.domain === 'example.com');
+          if (request.onsuccess) request.onsuccess();
+        }, 0);
+        return request;
+      });
+
+      const result = await storage.getUserInteractions({ domain: 'example.com' });
+
+      expect(result).toHaveLength(1);
+      expect(mockIDBObjectStore.index).toHaveBeenCalledWith('domain');
+      expect(mockIDBIndex.getAll).toHaveBeenCalledWith('example.com');
+    });
+  });
+
+  describe('Database Upgrade Scenarios', () => {
+    test('should skip creating existing object stores', async () => {
+      mockIDBDatabase.objectStoreNames.contains.mockImplementation((storeName) => {
+        // Simulate that automationPatterns already exists
+        return storeName === 'automationPatterns';
+      });
+      
+      mockIndexedDB.open.mockImplementation(() => {
+        const request = { ...mockIDBRequest };
+        setTimeout(() => {
+          request.result = mockIDBDatabase;
+          if (request.onupgradeneeded) {
+            request.onupgradeneeded({ target: request });
+          }
+          if (request.onsuccess) request.onsuccess();
+        }, 0);
+        return request;
+      });
+
+      await storage.init();
+
+      // Should create only the missing stores
+      expect(mockIDBDatabase.createObjectStore).toHaveBeenCalledWith('userInteractions', { keyPath: 'id' });
+      expect(mockIDBDatabase.createObjectStore).toHaveBeenCalledWith('websiteConfigs', { keyPath: 'domain' });
+      expect(mockIDBDatabase.createObjectStore).not.toHaveBeenCalledWith('automationPatterns', { keyPath: 'id' });
+    });
+  });
+
   describe('Error Handling', () => {
     beforeEach(async () => {
       await storage.init();
@@ -620,6 +722,130 @@ describe('WebBuddyStorage', () => {
 
       await expect(storage.getStorageStats()).rejects.toThrow(error);
       expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to get storage stats:', error);
+      
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle update pattern get request error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const error = new Error('Get request failed');
+      
+      mockIDBObjectStore.get.mockImplementation(() => {
+        const request = { ...mockIDBRequest };
+        setTimeout(() => {
+          request.error = error;
+          if (request.onerror) request.onerror();
+        }, 0);
+        return request;
+      });
+
+      await expect(storage.updateAutomationPattern('pattern1', {})).rejects.toThrow(error);
+      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to get automation pattern for update:', error);
+      
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle update pattern put request error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const error = new Error('Put request failed');
+      const existingPattern = { id: 'pattern1', action: 'click' };
+      
+      mockIDBObjectStore.get.mockImplementation(() => {
+        const request = { ...mockIDBRequest };
+        setTimeout(() => {
+          request.result = existingPattern;
+          if (request.onsuccess) request.onsuccess();
+        }, 0);
+        return request;
+      });
+
+      mockIDBObjectStore.put.mockImplementation(() => {
+        const request = { ...mockIDBRequest };
+        setTimeout(() => {
+          request.error = error;
+          if (request.onerror) request.onerror();
+        }, 0);
+        return request;
+      });
+
+      await expect(storage.updateAutomationPattern('pattern1', { action: 'submit' })).rejects.toThrow(error);
+      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to update automation pattern:', error);
+      
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle save user interaction error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const error = new Error('Save interaction failed');
+      
+      mockIDBObjectStore.add.mockImplementation(() => {
+        const request = { ...mockIDBRequest };
+        setTimeout(() => {
+          request.error = error;
+          if (request.onerror) request.onerror();
+        }, 0);
+        return request;
+      });
+
+      await expect(storage.saveUserInteraction({ eventType: 'click' })).rejects.toThrow(error);
+      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to save user interaction:', error);
+      
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle get user interactions error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const error = new Error('Get interactions failed');
+      
+      mockIDBObjectStore.getAll.mockImplementation(() => {
+        const request = { ...mockIDBRequest };
+        setTimeout(() => {
+          request.error = error;
+          if (request.onerror) request.onerror();
+        }, 0);
+        return request;
+      });
+
+      await expect(storage.getUserInteractions()).rejects.toThrow(error);
+      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to get user interactions:', error);
+      
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle save website config error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const error = new Error('Save config failed');
+      
+      mockIDBObjectStore.put.mockImplementation(() => {
+        const request = { ...mockIDBRequest };
+        setTimeout(() => {
+          request.error = error;
+          if (request.onerror) request.onerror();
+        }, 0);
+        return request;
+      });
+
+      await expect(storage.saveWebsiteConfig({ domain: 'test.com' })).rejects.toThrow(error);
+      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to save website config:', error);
+      
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle get website config error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const error = new Error('Get config failed');
+      
+      mockIDBObjectStore.get.mockImplementation(() => {
+        const request = { ...mockIDBRequest };
+        setTimeout(() => {
+          request.error = error;
+          if (request.onerror) request.onerror();
+        }, 0);
+        return request;
+      });
+
+      await expect(storage.getWebsiteConfig('test.com')).rejects.toThrow(error);
+      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to get website config:', error);
       
       consoleSpy.mockRestore();
     });
