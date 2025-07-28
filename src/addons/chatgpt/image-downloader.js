@@ -104,11 +104,15 @@ function startImageMonitoring() {
     }
     
     // Check state detector if available
-    if (window.chatGPTStateDetector) {
-      const state = window.chatGPTStateDetector.getState();
-      if (state.isImageGenerating) {
-        console.log('🎨 Image is still generating...');
-        return; // Wait for it to complete
+    if (window.chatGPTStateDetector && window.chatGPTStateDetector.detectState) {
+      try {
+        const state = window.chatGPTStateDetector.detectState();
+        if (state && state.isImageGenerating) {
+          console.log('🎨 Image is still generating...');
+          return; // Wait for it to complete
+        }
+      } catch (err) {
+        console.warn('⚠️ State detector error:', err.message);
       }
     }
     
