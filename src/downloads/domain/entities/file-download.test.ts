@@ -3,16 +3,10 @@
  */
 
 // Mock @typescript-eda/core
-jest.mock('@typescript-eda/core', () => ({
-  Entity: class Entity<T> {
-    constructor() {}
-  },
-  listen: (eventClass: any) => {
-    return (target: any, propertyName: string, descriptor: PropertyDescriptor) => {
-      return descriptor;
-    };
-  }
-}));
+jest.mock('@typescript-eda/core');
+
+// Mock the download events module to avoid circular dependencies
+jest.mock('../events/download-events');
 
 // Mock chrome.downloads API
 const mockDownload = jest.fn();
