@@ -161,13 +161,19 @@ function isGeneratedImage(img) {
   const messageContainer = img.closest('[data-testid="conversation-turn"]');
   
   // Check minimum size (generated images are usually larger)
-  // Note: naturalWidth/Height might be 0 if image is still loading
-  const minSize = 200; // Increased threshold to avoid placeholders
-  const sizeOk = (img.naturalWidth >= minSize && img.naturalHeight >= minSize) ||
-                 (img.width >= minSize && img.height >= minSize);
+  // DALL-E 3 images are typically 1024x1024 or 1792x1024
+  const minSize = 512; // Much higher threshold to avoid early downloads
   
-  // Don't download if image is still loading
+  // Don't download if image is still loading or too small
   if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+    return false;
+  }
+  
+  // Require proper size - don't rely on alt/title alone
+  const sizeOk = img.naturalWidth >= minSize && img.naturalHeight >= minSize;
+  
+  if (!sizeOk) {
+    // Too small - likely a placeholder or still generating
     return false;
   }
   
@@ -175,9 +181,9 @@ function isGeneratedImage(img) {
   const hasAlt = img.alt && (img.alt.includes('Generated') || img.alt.includes('DALL'));
   const hasTitle = img.title && (img.title.includes('Generated') || img.title.includes('DALL'));
   
-  // If it passes basic checks and is in chat area
-  if (isInChat && (sizeOk || hasAlt || hasTitle)) {
-    // Detected generated image
+  // Only download if it's properly sized AND in chat area
+  if (isInChat && sizeOk) {
+    // Detected complete generated image
     return true;
   }
   
@@ -203,6 +209,9 @@ async function handleGeneratedImage(img) {
       setTimeout(resolve, 5000); // Timeout after 5 seconds
     });
   }
+  
+  // Extra safety: wait a bit more to ensure image is stable
+  await new Promise(resolve => setTimeout(resolve, 1000));
   
   // Mark as downloaded to prevent duplicates
   downloadedImages.add(src);
