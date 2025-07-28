@@ -5,15 +5,17 @@ let pendingImageDownload = null;
 
 // Listen for state changes
 if (window.chatGPTStateDetector) {
-  window.chatGPTStateDetector.onStateChange((newState, oldState) => {
+  let previousState = null;
+  
+  window.chatGPTStateDetector.stateChangeCallbacks.push((newState) => {
     console.log('🎯 Coordinator: State changed', { 
-      wasGenerating: oldState?.isImageGenerating, 
+      wasGenerating: previousState?.isImageGenerating, 
       isGenerating: newState.isImageGenerating,
       isIdle: newState.isIdle 
     });
     
     // If we just finished generating an image (was generating, now idle)
-    if (oldState?.isImageGenerating && !newState.isImageGenerating && newState.isIdle) {
+    if (previousState?.isImageGenerating && !newState.isImageGenerating && newState.isIdle) {
       console.log('✅ Image generation completed! Triggering download...');
       
       // Give it a moment for the DOM to update
@@ -37,7 +39,14 @@ if (window.chatGPTStateDetector) {
         }
       }, 1000); // Give more time for image to fully load
     }
+    
+    // Update previous state for next comparison
+    previousState = newState;
   });
+  
+  console.log('✅ Coordinator registered with state detector');
+} else {
+  console.error('❌ State detector not available!');
 }
 
 console.log('🎯 Coordinator ready - will download images after generation completes');
