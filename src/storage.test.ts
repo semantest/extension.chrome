@@ -100,7 +100,7 @@ describe('WebBuddyStorage', () => {
       const error = new Error('Database initialization failed');
       
       mockIndexedDB.open.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
+        const request = { ...mockIDBRequest } as any;
         setTimeout(() => {
           request.error = error;
           if (request.onerror) request.onerror();

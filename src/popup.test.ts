@@ -236,7 +236,7 @@ describe('PopupController', () => {
     });
 
     test('should handle connection errors', async () => {
-      mockChrome.runtime.lastError = { message: 'Connection failed' };
+      (mockChrome.runtime as any).lastError = { message: 'Connection failed' };
       mockChrome.runtime.sendMessage.mockImplementation((message, callback) => {
         if (callback) callback(null);
       });

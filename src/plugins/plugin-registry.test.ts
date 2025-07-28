@@ -66,7 +66,7 @@ class MockPlugin implements WebBuddyPlugin {
     this._initialized = false;
   }
 
-  getContracts(): any[] {
+  getContracts(): WebBuddyContract[] {
     return [];
   }
 
@@ -78,11 +78,11 @@ class MockPlugin implements WebBuddyPlugin {
     return { valid: true, errors: [] };
   }
 
-  getUIComponents(): any[] {
+  getUIComponents(): PluginUIComponent[] {
     return [];
   }
 
-  getMenuItems(): any[] {
+  getMenuItems(): PluginMenuItem[] {
     return [];
   }
 
