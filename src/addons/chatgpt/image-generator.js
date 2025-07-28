@@ -4,6 +4,15 @@ console.log('🎨 ChatGPT Image Generator loaded');
 async function generateImage(promptText) {
   console.log('🖼️ Starting image generation with prompt:', promptText);
   
+  // Send immediate acknowledgment
+  if (window.semantestBridge && window.semantestBridge.sendToExtension) {
+    window.semantestBridge.sendToExtension({
+      type: 'addon:response',
+      status: 'started',
+      message: 'Image generation process started'
+    });
+  }
+  
   try {
     // Step 1: First check if we're already in image mode
     const currentPlaceholder = document.querySelector('#prompt-textarea')?.getAttribute('placeholder');
@@ -268,18 +277,27 @@ async function enterImagePrompt(promptText) {
     // Step 3: Enter the prompt
     console.log('📝 Entering image prompt...');
     
+    // Ensure we're using the image tool by prefixing if not already in image mode
+    let finalPrompt = promptText;
+    const placeholder = imageInput.getAttribute('placeholder') || '';
+    if (!placeholder.toLowerCase().includes('image') && !placeholder.toLowerCase().includes('dall')) {
+      // Not in image mode - prefix the prompt to ensure image generation
+      finalPrompt = `Create an image: ${promptText}`;
+      console.log('📝 Prefixing prompt to ensure image generation');
+    }
+    
     // Focus and clear the input
     imageInput.focus();
     imageInput.click();
     
     if (imageInput.tagName === 'TEXTAREA' || imageInput.tagName === 'INPUT') {
-      imageInput.value = promptText;
+      imageInput.value = finalPrompt;
       imageInput.dispatchEvent(new Event('input', { bubbles: true }));
     } else {
       // ContentEditable
       imageInput.innerHTML = '';
       const paragraph = document.createElement('p');
-      paragraph.textContent = promptText;
+      paragraph.textContent = finalPrompt;
       imageInput.appendChild(paragraph);
       
       imageInput.dispatchEvent(new InputEvent('input', { 
