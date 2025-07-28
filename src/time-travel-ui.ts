@@ -5,7 +5,7 @@
  * with time-travel capabilities through the message store.
  */
 
-import { globalMessageStore, MessageStoreState, MessageState } from './message-store.js';
+import { globalMessageStore, MessageStoreState, MessageState } from './message-store';
 
 export class TimeTravelUI {
   private isVisible = false;
