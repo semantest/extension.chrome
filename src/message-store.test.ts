@@ -507,12 +507,14 @@ describe('Message Store', () => {
           { ...mockMessage, timestamp: 1234567890, metadata: mockMetadata } as MessageState
         ];
         
-        mockChrome.storage.local.get.mockResolvedValue({
-          'web-buddy-message-store': {
-            messages: persistedMessages,
-            timestamp: Date.now(),
-            version: 1
-          }
+        mockChrome.storage.local.get.mockImplementation((keys, callback) => {
+          callback({
+            'web-buddy-message-store': {
+              messages: persistedMessages,
+              timestamp: Date.now(),
+              version: 1
+            }
+          });
         });
 
         const newStore = new MessageStore();
@@ -520,11 +522,14 @@ describe('Message Store', () => {
         // Wait for async loading
         await new Promise(resolve => setTimeout(resolve, 10));
 
-        expect(mockChrome.storage.local.get).toHaveBeenCalledWith('web-buddy-message-store');
+        expect(mockChrome.storage.local.get).toHaveBeenCalledWith(['web-buddy-message-store'], expect.any(Function));
       });
 
       test('should handle persistence loading errors', async () => {
-        mockChrome.storage.local.get.mockRejectedValue(new Error('Storage error'));
+        mockChrome.storage.local.get.mockImplementation((keys, callback) => {
+          // Simulate an error by not calling the callback
+          throw new Error('Storage error');
+        });
 
         const newStore = new MessageStore();
         
