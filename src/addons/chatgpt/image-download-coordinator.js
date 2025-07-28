@@ -14,25 +14,28 @@ if (window.chatGPTStateDetector) {
     
     // If we just finished generating an image (was generating, now idle)
     if (oldState?.isImageGenerating && !newState.isImageGenerating && newState.isIdle) {
-      console.log('✅ Image generation completed! Checking for new images...');
+      console.log('✅ Image generation completed! Triggering download...');
       
       // Give it a moment for the DOM to update
       setTimeout(() => {
-        // Find and download any new DALL-E images
-        const images = document.querySelectorAll('img');
-        console.log(`🎯 Coordinator: Found ${images.length} images to check`);
-        
-        images.forEach((img, index) => {
-          console.log(`🎯 Checking image ${index}:`, img.src?.substring(0, 80));
-          
-          if (window.chatGPTImageDownloader && 
-              window.chatGPTImageDownloader.checkForImages) {
-            window.chatGPTImageDownloader.checkForImages(img);
-          } else {
-            console.error('❌ chatGPTImageDownloader not available!');
-          }
-        });
-      }, 500);
+        // Force download the last DALL-E image
+        if (window.chatGPTImageDownloader && 
+            window.chatGPTImageDownloader.forceDownloadLastImage) {
+          console.log('🎯 Coordinator: Force downloading last image');
+          window.chatGPTImageDownloader.forceDownloadLastImage();
+        } else {
+          // Fallback: check all images
+          const images = document.querySelectorAll('img');
+          images.forEach(img => {
+            if (img.src && img.src.includes('oaiusercontent')) {
+              if (window.chatGPTImageDownloader && 
+                  window.chatGPTImageDownloader.checkForImages) {
+                window.chatGPTImageDownloader.checkForImages(img);
+              }
+            }
+          });
+        }
+      }, 1000); // Give more time for image to fully load
     }
   });
 }

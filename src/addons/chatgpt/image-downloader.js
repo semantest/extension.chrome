@@ -77,37 +77,16 @@ function startImageMonitoring() {
   checkInterval = setInterval(() => {
     // Check if we're still expecting an image
     if (!expectingImage) {
-      console.log('⏸️ Not expecting image anymore, skipping check');
       return;
     }
     
-    // Check state detector if available
-    if (window.chatGPTStateDetector && window.chatGPTStateDetector.detectState) {
-      try {
-        const state = window.chatGPTStateDetector.detectState();
-        if (state && state.isImageGenerating) {
-          console.log('🎨 Image is still generating...');
-          return; // Wait for it to complete
-        }
-      } catch (err) {
-        console.warn('⚠️ State detector error:', err.message);
+    // Check all images on the page periodically
+    const images = document.querySelectorAll('img');
+    images.forEach(img => {
+      if (img.src && img.src.includes('oaiusercontent') && !downloadedImages.has(img.src)) {
+        checkForImages(img);
       }
-    }
-    
-    // Only check if there are new messages
-    const currentMessages = document.querySelectorAll('[data-testid="conversation-turn"]');
-    const currentMessageCount = currentMessages.length;
-    
-    if (currentMessageCount > lastMessageCount) {
-      console.log('🔍 New message detected! Checking for images...');
-      
-      // Only check the NEW messages
-      for (let i = lastMessageCount; i < currentMessageCount; i++) {
-        checkForImages(currentMessages[i]);
-      }
-      
-      lastMessageCount = currentMessageCount;
-    }
+    });
   }, 2000); // Check every 2 seconds
   
   // DON'T check existing images immediately - wait for NEW ones only
@@ -174,18 +153,8 @@ function isGeneratedImage(img) {
     return false;
   }
   
-  // IMPORTANT: Check if image generation is still in progress
-  if (window.chatGPTStateDetector && window.chatGPTStateDetector.detectState) {
-    try {
-      const state = window.chatGPTStateDetector.detectState();
-      if (state && state.isImageGenerating) {
-        console.log('⏳ Image still generating, waiting for completion...');
-        return false; // Don't download until generation is complete
-      }
-    } catch (err) {
-      console.warn('⚠️ Could not check generation state:', err.message);
-    }
-  }
+  // Skip this check - it's preventing downloads
+  // The coordinator will handle timing based on state changes
   
   // DALL-E images typically have these characteristics
   const isDalleUrl = src.includes('dalle') || 
