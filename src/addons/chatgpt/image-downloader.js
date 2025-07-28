@@ -118,22 +118,9 @@ function checkForImages(element) {
   }
 }
 
-function isSendButtonEnabled() {
-  // Find the send button - it's disabled during image generation
-  const sendButton = document.querySelector('button[data-testid="send-button"]') ||
-                     document.querySelector('button[aria-label="Send message"]') ||
-                     document.querySelector('#prompt-textarea')?.parentElement?.querySelector('button[type="submit"]') ||
-                     document.querySelector('button[type="submit"]:not([disabled])');
-  
-  if (!sendButton) {
-    console.log('⚠️ Send button not found');
-    return true; // Assume ready if we can't find the button
-  }
-  
-  const isEnabled = !sendButton.disabled;
-  console.log(`🔘 Send button state: ${isEnabled ? 'ENABLED' : 'DISABLED'}`);
-  return isEnabled;
-}
+
+// Flag to control whether automatic detection is active
+let allowAutomaticDetection = false;
 
 function isGeneratedImage(img) {
   // Check if this is a DALL-E generated image
@@ -175,28 +162,21 @@ function isGeneratedImage(img) {
     return false;
   }
   
-  // CRITICAL: Check if send button is enabled - this indicates generation is complete
-  const sendButtonEnabled = isSendButtonEnabled();
-  
-  // Also check if we've been monitoring for a while (fallback)
-  const monitoringDuration = monitoringStartTime ? Date.now() - monitoringStartTime : 0;
-  const hasBeenMonitoringLongEnough = monitoringDuration > 5000; // 5 seconds
-  
-  if (!sendButtonEnabled && !hasBeenMonitoringLongEnough) {
-    // Still generating - don't download yet
-    console.log(`⏳ Waiting for completion (monitoring for ${Math.round(monitoringDuration/1000)}s)`);
+  // IMPORTANT: Only detect images if automatic detection is enabled
+  // This prevents downloading intermediate images
+  if (!allowAutomaticDetection) {
     return false;
   }
   
   // Basic size check to avoid tiny images
-  const minSize = 100; // Lower threshold since we rely on send button state
+  const minSize = 100;
   if (img.naturalWidth === 0 || img.naturalHeight === 0) {
     return false; // Image not loaded yet
   }
   
   const sizeOk = img.naturalWidth >= minSize && img.naturalHeight >= minSize;
   
-  // If send button is enabled and image has reasonable size, it's ready
+  // If image has reasonable size, it's ready
   if (sizeOk) {
     // Detected complete generated image
     return true;
@@ -388,13 +368,12 @@ function debugCheckAllImages() {
   console.log(`\n📊 Summary: ${dalleImages} potential DALL-E images found`);
 }
 
-// Force download the last DALL-E image (for testing)
+// Force download the last DALL-E image (called by coordinator when generation completes)
 async function forceDownloadLastImage() {
-  console.log('🔧 Force downloading last DALL-E image...');
+  console.log('🔧 Downloading completed image...');
   
-  // Clear the initial images to bypass the check
-  initialImages.clear();
-  console.log('✅ Cleared initial images cache');
+  // Temporarily enable automatic detection
+  allowAutomaticDetection = true;
   
   // Find all DALL-E images
   const allImages = Array.from(document.querySelectorAll('img'));
@@ -404,12 +383,13 @@ async function forceDownloadLastImage() {
   
   if (dalleImages.length === 0) {
     console.log('❌ No DALL-E images found');
+    allowAutomaticDetection = false;
     return;
   }
   
-  // Get the last one
+  // Get the last one (most recent)
   const lastImage = dalleImages[dalleImages.length - 1];
-  console.log('📸 Found last DALL-E image:', lastImage.src.substring(0, 80) + '...');
+  console.log('📸 Found completed image:', lastImage.src.substring(0, 80) + '...');
   
   // Download it
   try {
@@ -417,6 +397,9 @@ async function forceDownloadLastImage() {
     console.log('✅ Download triggered!');
   } catch (error) {
     console.error('❌ Download failed:', error);
+  } finally {
+    // Disable automatic detection again
+    allowAutomaticDetection = false;
   }
 }
 
