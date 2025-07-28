@@ -10,7 +10,8 @@ module.exports = {
     '^@training/(.*)$': '<rootDir>/src/training/$1',
     '^@plugins/(.*)$': '<rootDir>/src/plugins/$1',
     '^@contracts/(.*)$': '<rootDir>/src/contracts/$1',
-    '^typescript-eda$': '<rootDir>/src/__mocks__/typescript-eda.ts'
+    '^typescript-eda$': '<rootDir>/src/__mocks__/typescript-eda.ts',
+    '^@typescript-eda/core$': '<rootDir>/src/__mocks__/typescript-eda.ts'
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   collectCoverageFrom: [
