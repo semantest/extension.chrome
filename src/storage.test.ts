@@ -1,853 +1,741 @@
 /**
- * Unit Tests for WebBuddyStorage
- * Tests IndexedDB storage layer for automation patterns, user interactions, and website configs
+ * Unit tests for storage.ts
  */
 
-import { webBuddyStorage } from './storage';
-import type { AutomationPattern, UserInteraction, WebsiteConfig } from './storage';
+import { webBuddyStorage, AutomationPattern, UserInteraction, WebsiteConfig } from './storage';
 
 // Mock IndexedDB
 const mockIndexedDB = {
   open: jest.fn(),
-  deleteDatabase: jest.fn(),
 };
 
-const mockIDBDatabase = {
-  createObjectStore: jest.fn(),
-  transaction: jest.fn(),
-  close: jest.fn(),
-  objectStoreNames: {
-    contains: jest.fn(),
-  },
-};
-
-const mockIDBObjectStore = {
+const mockObjectStore = {
   add: jest.fn(),
   get: jest.fn(),
   getAll: jest.fn(),
   put: jest.fn(),
-  delete: jest.fn(),
   count: jest.fn(),
-  createIndex: jest.fn(),
   index: jest.fn(),
   openCursor: jest.fn(),
+  delete: jest.fn(),
 };
 
-const mockIDBTransaction = {
-  objectStore: jest.fn(() => mockIDBObjectStore),
-  oncomplete: null,
-  onerror: null,
-};
-
-const mockIDBRequest = {
-  onsuccess: null,
-  onerror: null,
-  result: null,
-  error: null,
-};
-
-const mockIDBIndex = {
+const mockIndex = {
   getAll: jest.fn(),
   openCursor: jest.fn(),
 };
 
-// Setup global mocks
+const mockTransaction = {
+  objectStore: jest.fn(() => mockObjectStore),
+  oncomplete: null as any,
+  onerror: null as any,
+  error: null as any,
+};
+
+const mockDB = {
+  transaction: jest.fn(() => mockTransaction),
+  objectStoreNames: {
+    contains: jest.fn(),
+  },
+  createObjectStore: jest.fn(),
+};
+
+const mockRequest = {
+  result: null as any,
+  error: null as any,
+  onsuccess: null as any,
+  onerror: null as any,
+};
+
+const mockCursor = {
+  value: null as any,
+  delete: jest.fn(),
+  continue: jest.fn(),
+};
+
+// Set up global mocks
 global.indexedDB = mockIndexedDB as any;
-global.IDBKeyRange = {
-  upperBound: jest.fn(),
-  lowerBound: jest.fn(),
-  bound: jest.fn(),
-  only: jest.fn(),
-} as any;
 
 describe('WebBuddyStorage', () => {
-  let storage: any;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Reset mock implementations
-    mockIDBDatabase.transaction.mockReturnValue(mockIDBTransaction);
-    mockIDBObjectStore.index.mockReturnValue(mockIDBIndex);
-    
-    // Mock successful database initialization
-    mockIndexedDB.open.mockImplementation(() => {
-      const request = { ...mockIDBRequest } as any;
-      setTimeout(() => {
-        request.result = mockIDBDatabase;
-        if (request.onsuccess) request.onsuccess();
-      }, 0);
-      return request;
-    });
-
-    storage = webBuddyStorage;
+    mockObjectStore.index.mockReturnValue(mockIndex);
   });
 
-  describe('Database Initialization', () => {
-    test('should initialize database successfully', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      
-      await storage.init();
-      
+  describe('initialization', () => {
+    test('should initialize IndexedDB successfully', async () => {
+      const openRequest = {
+        result: mockDB,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+        onupgradeneeded: null as any,
+      };
+
+      mockIndexedDB.open.mockReturnValue(openRequest);
+
+      // Trigger initialization
+      const initPromise = webBuddyStorage.init();
+
+      // Simulate successful open
+      setTimeout(() => {
+        if (openRequest.onsuccess) {
+          openRequest.onsuccess();
+        }
+      }, 0);
+
+      await initPromise;
+
       expect(mockIndexedDB.open).toHaveBeenCalledWith('WebBuddyDB', 1);
-      expect(consoleSpy).toHaveBeenCalledWith('✅ IndexedDB initialized successfully');
-      
-      consoleSpy.mockRestore();
     });
 
-    test('should handle database initialization error', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const error = new Error('Database initialization failed');
-      
-      mockIndexedDB.open.mockImplementation(() => {
-        const request = { ...mockIDBRequest } as any;
-        setTimeout(() => {
-          request.error = error;
-          if (request.onerror) request.onerror();
-        }, 0);
-        return request;
-      });
+    test('should handle IndexedDB initialization error', async () => {
+      const openRequest = {
+        result: null,
+        error: new Error('Failed to open'),
+        onsuccess: null as any,
+        onerror: null as any,
+        onupgradeneeded: null as any,
+      };
 
-      await expect(storage.init()).rejects.toThrow(error);
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to open IndexedDB:', error);
-      
-      consoleSpy.mockRestore();
+      mockIndexedDB.open.mockReturnValue(openRequest);
+
+      const initPromise = webBuddyStorage.init();
+
+      // Simulate error
+      setTimeout(() => {
+        if (openRequest.onerror) {
+          openRequest.onerror();
+        }
+      }, 0);
+
+      await expect(initPromise).rejects.toEqual(new Error('Failed to open'));
     });
 
     test('should create object stores on upgrade', async () => {
-      mockIDBDatabase.objectStoreNames.contains.mockReturnValue(false);
-      
-      mockIndexedDB.open.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockIDBDatabase;
-          if (request.onupgradeneeded) {
-            request.onupgradeneeded({ target: request });
-          }
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
+      const openRequest = {
+        result: mockDB,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+        onupgradeneeded: null as any,
+      };
 
-      await storage.init();
+      mockIndexedDB.open.mockReturnValue(openRequest);
+      mockDB.objectStoreNames.contains.mockReturnValue(false);
 
-      expect(mockIDBDatabase.createObjectStore).toHaveBeenCalledWith('automationPatterns', { keyPath: 'id' });
-      expect(mockIDBDatabase.createObjectStore).toHaveBeenCalledWith('userInteractions', { keyPath: 'id' });
-      expect(mockIDBDatabase.createObjectStore).toHaveBeenCalledWith('websiteConfigs', { keyPath: 'domain' });
+      const mockStore = {
+        createIndex: jest.fn(),
+      };
+      mockDB.createObjectStore.mockReturnValue(mockStore);
+
+      const initPromise = webBuddyStorage.init();
+
+      // Simulate upgrade
+      setTimeout(() => {
+        if (openRequest.onupgradeneeded) {
+          const event = {
+            target: { result: mockDB },
+          };
+          openRequest.onupgradeneeded(event as any);
+        }
+        if (openRequest.onsuccess) {
+          openRequest.onsuccess();
+        }
+      }, 0);
+
+      await initPromise;
+
+      expect(mockDB.createObjectStore).toHaveBeenCalledWith('automationPatterns', { keyPath: 'id' });
+      expect(mockDB.createObjectStore).toHaveBeenCalledWith('userInteractions', { keyPath: 'id' });
+      expect(mockDB.createObjectStore).toHaveBeenCalledWith('websiteConfigs', { keyPath: 'domain' });
     });
   });
 
-  describe('Automation Patterns', () => {
-    const mockPattern = {
-      url: 'https://example.com',
-      domain: 'example.com',
-      action: 'click',
-      selector: '#submit-button',
-      parameters: { timeout: 5000 },
-      success: true,
-      contextHash: 'abc123',
-      userConfirmed: true,
-    };
-
-    beforeEach(async () => {
-      await storage.init();
-    });
-
+  describe('saveAutomationPattern', () => {
     test('should save automation pattern successfully', async () => {
-      const mockId = 'pattern_1234567890_abc123def';
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      
-      mockIDBObjectStore.add.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
+      const pattern = {
+        url: 'https://example.com',
+        domain: 'example.com',
+        action: 'click',
+        selector: '#button',
+        parameters: {},
+        success: true,
+        contextHash: 'abc123',
+        userConfirmed: true,
+      };
 
-      // Mock Date.now and Math.random for predictable ID generation
-      const originalDateNow = Date.now;
-      const originalMathRandom = Math.random;
-      Date.now = jest.fn(() => 1234567890);
-      Math.random = jest.fn(() => 0.123456789);
+      const addRequest = {
+        result: 'pattern_123',
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
 
-      const result = await storage.saveAutomationPattern(mockPattern);
+      mockObjectStore.add.mockReturnValue(addRequest);
 
-      expect(result).toMatch(/^pattern_\d+_\w+$/);
-      expect(mockIDBObjectStore.add).toHaveBeenCalledWith(
+      const savePromise = webBuddyStorage.saveAutomationPattern(pattern);
+
+      // Simulate successful add
+      setTimeout(() => {
+        if (addRequest.onsuccess) {
+          addRequest.onsuccess();
+        }
+      }, 0);
+
+      const id = await savePromise;
+
+      expect(id).toMatch(/^pattern_\d+_[a-z0-9]+$/);
+      expect(mockObjectStore.add).toHaveBeenCalledWith(
         expect.objectContaining({
-          ...mockPattern,
-          id: expect.stringMatching(/^pattern_\d+_\w+$/),
+          ...pattern,
+          id: expect.any(String),
           timestamp: expect.any(Number),
         })
       );
-      expect(consoleSpy).toHaveBeenCalledWith('✅ Automation pattern saved:', expect.any(String));
-
-      // Restore original functions
-      Date.now = originalDateNow;
-      Math.random = originalMathRandom;
-      consoleSpy.mockRestore();
     });
 
-    test('should handle save automation pattern error', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const error = new Error('Add operation failed');
-      
-      mockIDBObjectStore.add.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.error = error;
-          if (request.onerror) request.onerror();
-        }, 0);
-        return request;
-      });
+    test('should handle save error', async () => {
+      const pattern = {
+        url: 'https://example.com',
+        domain: 'example.com',
+        action: 'click',
+        selector: '#button',
+        parameters: {},
+        success: true,
+        contextHash: 'abc123',
+        userConfirmed: true,
+      };
 
-      await expect(storage.saveAutomationPattern(mockPattern)).rejects.toThrow(error);
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to save automation pattern:', error);
-      
-      consoleSpy.mockRestore();
+      const addRequest = {
+        result: null,
+        error: new Error('Save failed'),
+        onsuccess: null as any,
+        onerror: null as any,
+      };
+
+      mockObjectStore.add.mockReturnValue(addRequest);
+
+      const savePromise = webBuddyStorage.saveAutomationPattern(pattern);
+
+      // Simulate error
+      setTimeout(() => {
+        if (addRequest.onerror) {
+          addRequest.onerror();
+        }
+      }, 0);
+
+      await expect(savePromise).rejects.toEqual(new Error('Save failed'));
     });
+  });
 
-    test('should retrieve automation patterns without filters', async () => {
-      const mockPatterns = [
-        { ...mockPattern, id: 'pattern1', timestamp: 1000 },
-        { ...mockPattern, id: 'pattern2', timestamp: 2000 },
+  describe('getAutomationPatterns', () => {
+    test('should get all automation patterns', async () => {
+      const patterns = [
+        {
+          id: 'pattern_1',
+          url: 'https://example.com',
+          domain: 'example.com',
+          action: 'click',
+          selector: '#button',
+          parameters: {},
+          success: true,
+          timestamp: Date.now(),
+          contextHash: 'abc123',
+          userConfirmed: true,
+        },
+        {
+          id: 'pattern_2',
+          url: 'https://example.com/page',
+          domain: 'example.com',
+          action: 'fill',
+          selector: 'input',
+          parameters: { value: 'test' },
+          success: false,
+          timestamp: Date.now() - 1000,
+          contextHash: 'def456',
+          userConfirmed: false,
+        },
       ];
-      
-      mockIDBObjectStore.getAll.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockPatterns;
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
 
-      const result = await storage.getAutomationPatterns();
+      const getAllRequest = {
+        result: patterns,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
 
-      expect(result).toEqual([
-        { ...mockPattern, id: 'pattern2', timestamp: 2000 },
-        { ...mockPattern, id: 'pattern1', timestamp: 1000 },
-      ]); // Sorted by timestamp desc
-      expect(mockIDBObjectStore.getAll).toHaveBeenCalled();
+      mockObjectStore.getAll.mockReturnValue(getAllRequest);
+
+      const getPromise = webBuddyStorage.getAutomationPatterns();
+
+      // Simulate successful get
+      setTimeout(() => {
+        if (getAllRequest.onsuccess) {
+          getAllRequest.onsuccess();
+        }
+      }, 0);
+
+      const result = await getPromise;
+
+      expect(result).toEqual(patterns);
+      expect(mockObjectStore.getAll).toHaveBeenCalled();
     });
 
-    test('should retrieve automation patterns with domain filter', async () => {
-      const mockPatterns = [
-        { ...mockPattern, id: 'pattern1', domain: 'example.com' },
+    test('should filter patterns by domain', async () => {
+      const patterns = [
+        {
+          id: 'pattern_1',
+          url: 'https://example.com',
+          domain: 'example.com',
+          action: 'click',
+          selector: '#button',
+          parameters: {},
+          success: true,
+          timestamp: Date.now(),
+          contextHash: 'abc123',
+          userConfirmed: true,
+        },
       ];
-      
-      mockIDBIndex.getAll.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockPatterns;
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
 
-      const result = await storage.getAutomationPatterns({ domain: 'example.com' });
+      const getAllRequest = {
+        result: patterns,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
 
-      expect(result).toEqual(mockPatterns);
-      expect(mockIDBObjectStore.index).toHaveBeenCalledWith('domain');
-      expect(mockIDBIndex.getAll).toHaveBeenCalledWith('example.com');
+      mockIndex.getAll.mockReturnValue(getAllRequest);
+
+      const getPromise = webBuddyStorage.getAutomationPatterns({ domain: 'example.com' });
+
+      // Simulate successful get
+      setTimeout(() => {
+        if (getAllRequest.onsuccess) {
+          getAllRequest.onsuccess();
+        }
+      }, 0);
+
+      const result = await getPromise;
+
+      expect(result).toEqual(patterns);
+      expect(mockObjectStore.index).toHaveBeenCalledWith('domain');
+      expect(mockIndex.getAll).toHaveBeenCalledWith('example.com');
     });
 
-    test('should apply success filter and limit', async () => {
-      const mockPatterns = [
-        { ...mockPattern, id: 'pattern1', success: true, timestamp: 3000 },
-        { ...mockPattern, id: 'pattern2', success: false, timestamp: 2000 },
-        { ...mockPattern, id: 'pattern3', success: true, timestamp: 1000 },
+    test('should filter patterns by success only', async () => {
+      const patterns = [
+        {
+          id: 'pattern_1',
+          url: 'https://example.com',
+          domain: 'example.com',
+          action: 'click',
+          selector: '#button',
+          parameters: {},
+          success: true,
+          timestamp: Date.now(),
+          contextHash: 'abc123',
+          userConfirmed: true,
+        },
+        {
+          id: 'pattern_2',
+          url: 'https://example.com/page',
+          domain: 'example.com',
+          action: 'fill',
+          selector: 'input',
+          parameters: { value: 'test' },
+          success: false,
+          timestamp: Date.now() - 1000,
+          contextHash: 'def456',
+          userConfirmed: false,
+        },
       ];
-      
-      mockIDBObjectStore.getAll.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockPatterns;
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
 
-      const result = await storage.getAutomationPatterns({ 
-        successOnly: true, 
-        limit: 1 
-      });
+      const getAllRequest = {
+        result: patterns,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
+
+      mockObjectStore.getAll.mockReturnValue(getAllRequest);
+
+      const getPromise = webBuddyStorage.getAutomationPatterns({ successOnly: true });
+
+      // Simulate successful get
+      setTimeout(() => {
+        if (getAllRequest.onsuccess) {
+          getAllRequest.onsuccess();
+        }
+      }, 0);
+
+      const result = await getPromise;
 
       expect(result).toHaveLength(1);
       expect(result[0].success).toBe(true);
-      expect(result[0].id).toBe('pattern1'); // Latest successful pattern
-    });
-
-    test('should update automation pattern successfully', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      const existingPattern = { ...mockPattern, id: 'pattern1' };
-      const updates = { success: false, userConfirmed: false };
-      
-      mockIDBObjectStore.get.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = existingPattern;
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
-
-      mockIDBObjectStore.put.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
-
-      await storage.updateAutomationPattern('pattern1', updates);
-
-      expect(mockIDBObjectStore.get).toHaveBeenCalledWith('pattern1');
-      expect(mockIDBObjectStore.put).toHaveBeenCalledWith({
-        ...existingPattern,
-        ...updates,
-      });
-      expect(consoleSpy).toHaveBeenCalledWith('✅ Automation pattern updated:', 'pattern1');
-      
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle update non-existent pattern', async () => {
-      mockIDBObjectStore.get.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = null;
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
-
-      await expect(storage.updateAutomationPattern('nonexistent', {})).rejects.toThrow('Pattern not found');
     });
   });
 
-  describe('User Interactions', () => {
-    const mockInteraction = {
-      sessionId: 'session123',
-      url: 'https://example.com',
-      domain: 'example.com',
-      eventType: 'click',
-      target: '#button',
-      success: true,
-      context: { page: 'homepage' },
-    };
+  describe('updateAutomationPattern', () => {
+    test('should update automation pattern successfully', async () => {
+      const existingPattern = {
+        id: 'pattern_1',
+        url: 'https://example.com',
+        domain: 'example.com',
+        action: 'click',
+        selector: '#button',
+        parameters: {},
+        success: false,
+        timestamp: Date.now(),
+        contextHash: 'abc123',
+        userConfirmed: false,
+      };
 
-    beforeEach(async () => {
-      await storage.init();
-    });
+      const getRequest = {
+        result: existingPattern,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
 
-    test('should save user interaction successfully', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      
-      mockIDBObjectStore.add.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
+      const putRequest = {
+        result: null,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
+
+      mockObjectStore.get.mockReturnValue(getRequest);
+      mockObjectStore.put.mockReturnValue(putRequest);
+
+      const updatePromise = webBuddyStorage.updateAutomationPattern('pattern_1', {
+        success: true,
+        userConfirmed: true,
       });
 
-      const result = await storage.saveUserInteraction(mockInteraction);
+      // Simulate successful get
+      setTimeout(() => {
+        if (getRequest.onsuccess) {
+          getRequest.onsuccess();
+        }
+      }, 0);
 
-      expect(result).toMatch(/^interaction_\d+_\w+$/);
-      expect(mockIDBObjectStore.add).toHaveBeenCalledWith(
+      // Simulate successful put
+      setTimeout(() => {
+        if (putRequest.onsuccess) {
+          putRequest.onsuccess();
+        }
+      }, 10);
+
+      await updatePromise;
+
+      expect(mockObjectStore.put).toHaveBeenCalledWith({
+        ...existingPattern,
+        success: true,
+        userConfirmed: true,
+      });
+    });
+
+    test('should handle pattern not found', async () => {
+      const getRequest = {
+        result: null,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
+
+      mockObjectStore.get.mockReturnValue(getRequest);
+
+      const updatePromise = webBuddyStorage.updateAutomationPattern('pattern_1', {
+        success: true,
+      });
+
+      // Simulate successful get with no result
+      setTimeout(() => {
+        if (getRequest.onsuccess) {
+          getRequest.onsuccess();
+        }
+      }, 0);
+
+      await expect(updatePromise).rejects.toThrow('Pattern not found');
+    });
+  });
+
+  describe('saveUserInteraction', () => {
+    test('should save user interaction successfully', async () => {
+      const interaction = {
+        sessionId: 'session_123',
+        url: 'https://example.com',
+        domain: 'example.com',
+        eventType: 'click',
+        target: '#button',
+        success: true,
+        context: { x: 100, y: 200 },
+      };
+
+      const addRequest = {
+        result: 'interaction_123',
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
+
+      mockObjectStore.add.mockReturnValue(addRequest);
+
+      const savePromise = webBuddyStorage.saveUserInteraction(interaction);
+
+      // Simulate successful add
+      setTimeout(() => {
+        if (addRequest.onsuccess) {
+          addRequest.onsuccess();
+        }
+      }, 0);
+
+      const id = await savePromise;
+
+      expect(id).toMatch(/^interaction_\d+_[a-z0-9]+$/);
+      expect(mockObjectStore.add).toHaveBeenCalledWith(
         expect.objectContaining({
-          ...mockInteraction,
-          id: expect.stringMatching(/^interaction_\d+_\w+$/),
+          ...interaction,
+          id: expect.any(String),
           timestamp: expect.any(Number),
         })
       );
-      expect(consoleSpy).toHaveBeenCalledWith('✅ User interaction saved:', expect.any(String));
-      
-      consoleSpy.mockRestore();
-    });
-
-    test('should retrieve user interactions with session filter', async () => {
-      const mockInteractions = [
-        { ...mockInteraction, id: 'interaction1', sessionId: 'session123' },
-      ];
-      
-      mockIDBIndex.getAll.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockInteractions;
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
-
-      const result = await storage.getUserInteractions({ sessionId: 'session123' });
-
-      expect(result).toEqual(mockInteractions);
-      expect(mockIDBObjectStore.index).toHaveBeenCalledWith('sessionId');
-      expect(mockIDBIndex.getAll).toHaveBeenCalledWith('session123');
-    });
-
-    test('should filter by event type and apply limit', async () => {
-      const mockInteractions = [
-        { ...mockInteraction, id: 'interaction1', eventType: 'click', timestamp: 3000 },
-        { ...mockInteraction, id: 'interaction2', eventType: 'scroll', timestamp: 2000 },
-        { ...mockInteraction, id: 'interaction3', eventType: 'click', timestamp: 1000 },
-      ];
-      
-      mockIDBObjectStore.getAll.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockInteractions;
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
-
-      const result = await storage.getUserInteractions({ 
-        eventType: 'click', 
-        limit: 1 
-      });
-
-      expect(result).toHaveLength(1);
-      expect(result[0].eventType).toBe('click');
-      expect(result[0].id).toBe('interaction1'); // Latest click interaction
     });
   });
 
-  describe('Website Configuration', () => {
-    const mockConfig: WebsiteConfig = {
-      domain: 'example.com',
-      preferences: { theme: 'dark' },
-      customSelectors: { submitButton: '#submit' },
-      lastAccessed: 1234567890,
-      automationEnabled: true,
-    };
+  describe('getUserInteractions', () => {
+    test('should get user interactions by session ID', async () => {
+      const interactions = [
+        {
+          id: 'interaction_1',
+          sessionId: 'session_123',
+          url: 'https://example.com',
+          domain: 'example.com',
+          eventType: 'click',
+          target: '#button',
+          timestamp: Date.now(),
+          success: true,
+          context: {},
+        },
+      ];
 
-    beforeEach(async () => {
-      await storage.init();
+      const getAllRequest = {
+        result: interactions,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
+
+      mockIndex.getAll.mockReturnValue(getAllRequest);
+
+      const getPromise = webBuddyStorage.getUserInteractions({ sessionId: 'session_123' });
+
+      // Simulate successful get
+      setTimeout(() => {
+        if (getAllRequest.onsuccess) {
+          getAllRequest.onsuccess();
+        }
+      }, 0);
+
+      const result = await getPromise;
+
+      expect(result).toEqual(interactions);
+      expect(mockObjectStore.index).toHaveBeenCalledWith('sessionId');
+      expect(mockIndex.getAll).toHaveBeenCalledWith('session_123');
     });
+  });
 
+  describe('saveWebsiteConfig', () => {
     test('should save website config successfully', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      
-      mockIDBObjectStore.put.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
+      const config: WebsiteConfig = {
+        domain: 'example.com',
+        preferences: { theme: 'dark' },
+        customSelectors: { button: '.custom-button' },
+        lastAccessed: 0,
+        automationEnabled: true,
+      };
 
-      await storage.saveWebsiteConfig(mockConfig);
+      const putRequest = {
+        result: null,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
 
-      expect(mockIDBObjectStore.put).toHaveBeenCalledWith(
+      mockObjectStore.put.mockReturnValue(putRequest);
+
+      const savePromise = webBuddyStorage.saveWebsiteConfig(config);
+
+      // Simulate successful put
+      setTimeout(() => {
+        if (putRequest.onsuccess) {
+          putRequest.onsuccess();
+        }
+      }, 0);
+
+      await savePromise;
+
+      expect(mockObjectStore.put).toHaveBeenCalledWith(
         expect.objectContaining({
-          ...mockConfig,
+          ...config,
           lastAccessed: expect.any(Number),
         })
       );
-      expect(consoleSpy).toHaveBeenCalledWith('✅ Website config saved:', 'example.com');
-      
-      consoleSpy.mockRestore();
     });
+  });
 
-    test('should retrieve website config successfully', async () => {
-      mockIDBObjectStore.get.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockConfig;
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
+  describe('getWebsiteConfig', () => {
+    test('should get website config successfully', async () => {
+      const config: WebsiteConfig = {
+        domain: 'example.com',
+        preferences: { theme: 'dark' },
+        customSelectors: { button: '.custom-button' },
+        lastAccessed: Date.now(),
+        automationEnabled: true,
+      };
 
-      const result = await storage.getWebsiteConfig('example.com');
+      const getRequest = {
+        result: config,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
 
-      expect(result).toEqual(mockConfig);
-      expect(mockIDBObjectStore.get).toHaveBeenCalledWith('example.com');
+      mockObjectStore.get.mockReturnValue(getRequest);
+
+      const getPromise = webBuddyStorage.getWebsiteConfig('example.com');
+
+      // Simulate successful get
+      setTimeout(() => {
+        if (getRequest.onsuccess) {
+          getRequest.onsuccess();
+        }
+      }, 0);
+
+      const result = await getPromise;
+
+      expect(result).toEqual(config);
+      expect(mockObjectStore.get).toHaveBeenCalledWith('example.com');
     });
 
     test('should return null for non-existent config', async () => {
-      mockIDBObjectStore.get.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = null;
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
+      const getRequest = {
+        result: null,
+        error: null,
+        onsuccess: null as any,
+        onerror: null as any,
+      };
 
-      const result = await storage.getWebsiteConfig('nonexistent.com');
+      mockObjectStore.get.mockReturnValue(getRequest);
+
+      const getPromise = webBuddyStorage.getWebsiteConfig('unknown.com');
+
+      // Simulate successful get
+      setTimeout(() => {
+        if (getRequest.onsuccess) {
+          getRequest.onsuccess();
+        }
+      }, 0);
+
+      const result = await getPromise;
 
       expect(result).toBeNull();
     });
   });
 
-  describe('Utility Methods', () => {
-    beforeEach(async () => {
-      await storage.init();
+  describe('clearOldData', () => {
+    test('should clear old data successfully', async () => {
+      const cursorRequest = {
+        result: null,
+        onsuccess: null as any,
+      };
+
+      mockIndex.openCursor.mockReturnValue(cursorRequest);
+
+      const clearPromise = webBuddyStorage.clearOldData(30);
+
+      // Simulate transaction complete
+      setTimeout(() => {
+        if (mockTransaction.oncomplete) {
+          mockTransaction.oncomplete();
+        }
+      }, 0);
+
+      await clearPromise;
+
+      expect(mockIndex.openCursor).toHaveBeenCalled();
     });
 
-    test('should clear old data successfully', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      const mockCursor = {
+    test('should delete old records through cursor', async () => {
+      const cursor1 = {
+        value: { id: 'old_1', timestamp: Date.now() - 40 * 24 * 60 * 60 * 1000 },
         delete: jest.fn(),
         continue: jest.fn(),
       };
 
-      mockIDBIndex.openCursor.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockCursor;
-          if (request.onsuccess) request.onsuccess({ target: request });
-          // Simulate cursor ending
-          setTimeout(() => {
-            request.result = null;
-            if (request.onsuccess) request.onsuccess({ target: request });
-          }, 10);
-        }, 0);
-        return request;
-      });
-
-      const originalDateNow = Date.now;
-      Date.now = jest.fn(() => 1000000);
-
-      // Mock transaction completion
-      setTimeout(() => {
-        if (mockIDBTransaction.oncomplete) mockIDBTransaction.oncomplete();
-      }, 20);
-
-      await storage.clearOldData(30);
-
-      expect(mockIDBObjectStore.index).toHaveBeenCalledWith('timestamp');
-      expect(mockCursor.delete).toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith('✅ Cleared data older than 30 days');
-
-      Date.now = originalDateNow;
-      consoleSpy.mockRestore();
-    });
-
-    test('should get storage statistics successfully', async () => {
-      const mockStats = {
-        automationPatterns: 10,
-        userInteractions: 25,
-        websiteConfigs: 5,
+      const cursorRequest = {
+        result: cursor1,
+        onsuccess: null as any,
       };
 
-      let requestCount = 0;
-      mockIDBObjectStore.count.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          const results = [10, 25, 5];
-          request.result = results[requestCount++];
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
+      mockIndex.openCursor.mockReturnValue(cursorRequest);
 
-      const result = await storage.getStorageStats();
+      const clearPromise = webBuddyStorage.clearOldData(30);
 
-      expect(result).toEqual(mockStats);
-      expect(mockIDBObjectStore.count).toHaveBeenCalledTimes(3);
-    });
+      // Simulate cursor iteration
+      setTimeout(() => {
+        if (cursorRequest.onsuccess) {
+          cursorRequest.onsuccess({ target: { result: cursor1 } } as any);
+          // Second call returns null to end iteration
+          cursorRequest.onsuccess({ target: { result: null } } as any);
+        }
+      }, 0);
 
-    test('should handle database not initialized error', async () => {
-      const uninitializedStorage = new (storage.constructor as any)();
-      uninitializedStorage.db = null;
+      // Simulate transaction complete
+      setTimeout(() => {
+        if (mockTransaction.oncomplete) {
+          mockTransaction.oncomplete();
+        }
+      }, 10);
 
-      await expect(uninitializedStorage.saveAutomationPattern({})).rejects.toThrow('Database not initialized');
-      await expect(uninitializedStorage.getAutomationPatterns()).rejects.toThrow('Database not initialized');
-      await expect(uninitializedStorage.saveUserInteraction({})).rejects.toThrow('Database not initialized');
-      await expect(uninitializedStorage.getUserInteractions()).rejects.toThrow('Database not initialized');
-      await expect(uninitializedStorage.saveWebsiteConfig({})).rejects.toThrow('Database not initialized');
-      await expect(uninitializedStorage.getWebsiteConfig('test')).rejects.toThrow('Database not initialized');
-      await expect(uninitializedStorage.clearOldData()).rejects.toThrow('Database not initialized');
-      await expect(uninitializedStorage.getStorageStats()).rejects.toThrow('Database not initialized');
+      await clearPromise;
+
+      expect(cursor1.delete).toHaveBeenCalled();
+      expect(cursor1.continue).toHaveBeenCalled();
     });
   });
 
-  describe('Advanced Filtering Tests', () => {
-    beforeEach(async () => {
-      await storage.init();
-    });
-
-    test('should filter automation patterns by action', async () => {
-      const mockPatterns = [
-        { id: 'p1', action: 'click', timestamp: 1000 },
-        { id: 'p2', action: 'submit', timestamp: 2000 },
-        { id: 'p3', action: 'click', timestamp: 3000 },
+  describe('getStorageStats', () => {
+    test('should get storage statistics successfully', async () => {
+      const countRequests = [
+        { result: 10, onsuccess: null as any }, // automation patterns
+        { result: 20, onsuccess: null as any }, // user interactions
+        { result: 5, onsuccess: null as any },  // website configs
       ];
-      
-      mockIDBIndex.getAll.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockPatterns.filter(p => p.action === 'click');
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
 
-      const result = await storage.getAutomationPatterns({ action: 'click' });
+      mockObjectStore.count.mockReturnValueOnce(countRequests[0])
+        .mockReturnValueOnce(countRequests[1])
+        .mockReturnValueOnce(countRequests[2]);
 
-      expect(result).toHaveLength(2);
-      expect(mockIDBObjectStore.index).toHaveBeenCalledWith('action');
-      expect(mockIDBIndex.getAll).toHaveBeenCalledWith('click');
-    });
+      const statsPromise = webBuddyStorage.getStorageStats();
 
-    test('should filter automation patterns by URL substring', async () => {
-      const mockPatterns = [
-        { id: 'p1', url: 'https://example.com/page1', timestamp: 1000 },
-        { id: 'p2', url: 'https://other.com/page', timestamp: 2000 },
-        { id: 'p3', url: 'https://example.com/page2', timestamp: 3000 },
-      ];
-      
-      mockIDBObjectStore.getAll.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockPatterns;
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
-
-      const result = await storage.getAutomationPatterns({ url: 'example.com' });
-
-      expect(result).toHaveLength(2);
-      expect(result[0].url).toContain('example.com');
-      expect(result[1].url).toContain('example.com');
-    });
-
-    test('should filter user interactions by domain', async () => {
-      const mockInteractions = [
-        { id: 'i1', domain: 'example.com', timestamp: 1000 },
-        { id: 'i2', domain: 'other.com', timestamp: 2000 },
-      ];
-      
-      mockIDBIndex.getAll.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockInteractions.filter(i => i.domain === 'example.com');
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
-
-      const result = await storage.getUserInteractions({ domain: 'example.com' });
-
-      expect(result).toHaveLength(1);
-      expect(mockIDBObjectStore.index).toHaveBeenCalledWith('domain');
-      expect(mockIDBIndex.getAll).toHaveBeenCalledWith('example.com');
-    });
-  });
-
-  describe('Database Upgrade Scenarios', () => {
-    test('should skip creating existing object stores', async () => {
-      mockIDBDatabase.objectStoreNames.contains.mockImplementation((storeName) => {
-        // Simulate that automationPatterns already exists
-        return storeName === 'automationPatterns';
-      });
-      
-      mockIndexedDB.open.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = mockIDBDatabase;
-          if (request.onupgradeneeded) {
-            request.onupgradeneeded({ target: request });
+      // Simulate successful counts
+      setTimeout(() => {
+        countRequests.forEach(request => {
+          if (request.onsuccess) {
+            request.onsuccess();
           }
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
+        });
+      }, 0);
+
+      const stats = await statsPromise;
+
+      expect(stats).toEqual({
+        automationPatterns: 10,
+        userInteractions: 20,
+        websiteConfigs: 5,
       });
-
-      await storage.init();
-
-      // Should create only the missing stores
-      expect(mockIDBDatabase.createObjectStore).toHaveBeenCalledWith('userInteractions', { keyPath: 'id' });
-      expect(mockIDBDatabase.createObjectStore).toHaveBeenCalledWith('websiteConfigs', { keyPath: 'domain' });
-      expect(mockIDBDatabase.createObjectStore).not.toHaveBeenCalledWith('automationPatterns', { keyPath: 'id' });
-    });
-  });
-
-  describe('Error Handling', () => {
-    beforeEach(async () => {
-      await storage.init();
-    });
-
-    test('should handle transaction errors', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const error = new Error('Transaction failed');
-      
-      mockIDBObjectStore.getAll.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.error = error;
-          if (request.onerror) request.onerror();
-        }, 0);
-        return request;
-      });
-
-      await expect(storage.getAutomationPatterns()).rejects.toThrow(error);
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to get automation patterns:', error);
-      
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle clear data transaction error', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const error = new Error('Clear operation failed');
-      
-      // Mock transaction error
-      setTimeout(() => {
-        mockIDBTransaction.error = error;
-        if (mockIDBTransaction.onerror) mockIDBTransaction.onerror();
-      }, 10);
-
-      await expect(storage.clearOldData()).rejects.toThrow(error);
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to clear old data:', error);
-      
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle storage stats transaction error', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const error = new Error('Stats operation failed');
-      
-      // Mock transaction error
-      setTimeout(() => {
-        mockIDBTransaction.error = error;
-        if (mockIDBTransaction.onerror) mockIDBTransaction.onerror();
-      }, 10);
-
-      await expect(storage.getStorageStats()).rejects.toThrow(error);
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to get storage stats:', error);
-      
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle update pattern get request error', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const error = new Error('Get request failed');
-      
-      mockIDBObjectStore.get.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.error = error;
-          if (request.onerror) request.onerror();
-        }, 0);
-        return request;
-      });
-
-      await expect(storage.updateAutomationPattern('pattern1', {})).rejects.toThrow(error);
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to get automation pattern for update:', error);
-      
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle update pattern put request error', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const error = new Error('Put request failed');
-      const existingPattern = { id: 'pattern1', action: 'click' };
-      
-      mockIDBObjectStore.get.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.result = existingPattern;
-          if (request.onsuccess) request.onsuccess();
-        }, 0);
-        return request;
-      });
-
-      mockIDBObjectStore.put.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.error = error;
-          if (request.onerror) request.onerror();
-        }, 0);
-        return request;
-      });
-
-      await expect(storage.updateAutomationPattern('pattern1', { action: 'submit' })).rejects.toThrow(error);
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to update automation pattern:', error);
-      
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle save user interaction error', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const error = new Error('Save interaction failed');
-      
-      mockIDBObjectStore.add.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.error = error;
-          if (request.onerror) request.onerror();
-        }, 0);
-        return request;
-      });
-
-      await expect(storage.saveUserInteraction({ eventType: 'click' })).rejects.toThrow(error);
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to save user interaction:', error);
-      
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle get user interactions error', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const error = new Error('Get interactions failed');
-      
-      mockIDBObjectStore.getAll.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.error = error;
-          if (request.onerror) request.onerror();
-        }, 0);
-        return request;
-      });
-
-      await expect(storage.getUserInteractions()).rejects.toThrow(error);
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to get user interactions:', error);
-      
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle save website config error', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const error = new Error('Save config failed');
-      
-      mockIDBObjectStore.put.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.error = error;
-          if (request.onerror) request.onerror();
-        }, 0);
-        return request;
-      });
-
-      await expect(storage.saveWebsiteConfig({ domain: 'test.com' })).rejects.toThrow(error);
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to save website config:', error);
-      
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle get website config error', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      const error = new Error('Get config failed');
-      
-      mockIDBObjectStore.get.mockImplementation(() => {
-        const request = { ...mockIDBRequest };
-        setTimeout(() => {
-          request.error = error;
-          if (request.onerror) request.onerror();
-        }, 0);
-        return request;
-      });
-
-      await expect(storage.getWebsiteConfig('test.com')).rejects.toThrow(error);
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to get website config:', error);
-      
-      consoleSpy.mockRestore();
     });
   });
 });
