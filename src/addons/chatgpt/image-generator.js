@@ -14,16 +14,8 @@ async function generateImage(promptText) {
   }
   
   try {
-    // Step 1: First check if we're already in image mode
-    const currentPlaceholder = document.querySelector('#prompt-textarea')?.getAttribute('placeholder');
-    if (currentPlaceholder?.toLowerCase().includes('image')) {
-      console.log('✅ Already in image generation mode!');
-      // Skip to entering the prompt
-      return await enterImagePrompt(promptText);
-    }
-    
-    // Step 2: Find and click the Tools menu button first
-    console.log('🔍 Looking for Tools menu button...');
+    // Skip tool selection - just use prompt prefix
+    console.log('📝 Using prompt prefix for image generation');
     
     // Find the tools menu button (the one you mentioned)
     const toolsMenuButton = document.querySelector('button[id^="radix-"][aria-haspopup="menu"]') ||
