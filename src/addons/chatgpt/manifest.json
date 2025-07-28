@@ -30,6 +30,7 @@
     "image-debug.js",
     "context-fix.js",
     "image-fix-aggressive.js",
+    "image-monitor-enhanced.js",
     "index.js"
   ]
 }
