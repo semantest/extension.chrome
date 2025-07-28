@@ -28,32 +28,34 @@ function startImageMonitoring() {
   initialImages.clear();
   initialCaptureComplete = false;
   
-  // WAIT before capturing existing images to let page settle
-  setTimeout(() => {
-    // Capture all existing images to ignore them
-    const existingImages = document.querySelectorAll('img');
-    console.log(`📊 Found ${existingImages.length} existing images after delay`);
-    existingImages.forEach(img => {
-      if (img.src) {
+  // Get the current message count BEFORE any new generation
+  const currentMessageCount = document.querySelectorAll('[data-testid="conversation-turn"]').length;
+  
+  // IMPORTANT: Don't capture existing images immediately!
+  // We're expecting a NEW image to be generated, so we should only
+  // capture images that existed BEFORE the generation started.
+  // Since this is called AFTER clicking generate, we need to be smarter.
+  
+  // Get the last message's images (if any) to exclude them
+  const messages = document.querySelectorAll('[data-testid="conversation-turn"]');
+  const lastMessage = messages[messages.length - 1];
+  if (lastMessage) {
+    const lastMessageImages = lastMessage.querySelectorAll('img');
+    console.log(`📊 Last message has ${lastMessageImages.length} images`);
+    lastMessageImages.forEach(img => {
+      if (img.src && img.src.includes('oaiusercontent')) {
         initialImages.add(img.src);
-        // Also add without query params to catch variations
         const urlWithoutParams = img.src.split('?')[0];
         initialImages.add(urlWithoutParams);
-        
-        // Only log DALL-E type images
-        if (img.src.includes('openai') || img.src.includes('dalle') || img.src.includes('blob:')) {
-          console.log('📌 Marking existing DALL-E image:', img.src.substring(0, 50) + '...');
-        }
+        console.log('📌 Excluding last message image:', img.src.substring(0, 50) + '...');
       }
     });
-    
-    // Also capture message count at start
-    initialMessageCount = document.querySelectorAll('[data-testid="conversation-turn"]').length;
-    console.log(`📊 Initial message count: ${initialMessageCount}`);
-    
-    initialCaptureComplete = true;
-    console.log('✅ Initial image capture complete, now watching for NEW images only');
-  }, 1000); // Wait 1 second for page to settle
+  }
+  
+  // Mark as ready immediately since we're expecting a NEW image
+  initialMessageCount = currentMessageCount;
+  initialCaptureComplete = true;
+  console.log('✅ Ready to detect NEW generated images only');
   
   // Method 1: MutationObserver for DOM changes
   // IMPORTANT: Don't start observing until initial capture is complete
@@ -89,16 +91,14 @@ function startImageMonitoring() {
     }
   });
   
-  // Delay starting the observer until after initial capture
-  setTimeout(() => {
-    imageObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['src']
-    });
-    console.log('👁️ MutationObserver now active');
-  }, 1500); // Start observing after initial capture is done
+  // Start observing immediately since we're ready
+  imageObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['src']
+  });
+  console.log('👁️ MutationObserver now active');
   
   // Method 2: Periodic check for images (backup method)
   // This catches images that might be loaded dynamically without DOM changes
@@ -528,6 +528,38 @@ function debugCheckAllImages() {
   console.log(`\n📊 Summary: ${dalleImages} potential DALL-E images found`);
 }
 
+// Force download the last DALL-E image (for testing)
+async function forceDownloadLastImage() {
+  console.log('🔧 Force downloading last DALL-E image...');
+  
+  // Clear the initial images to bypass the check
+  initialImages.clear();
+  console.log('✅ Cleared initial images cache');
+  
+  // Find all DALL-E images
+  const allImages = Array.from(document.querySelectorAll('img'));
+  const dalleImages = allImages.filter(img => 
+    img.src && (img.src.includes('oaiusercontent') || img.src.includes('dalle') || img.src.includes('openai'))
+  );
+  
+  if (dalleImages.length === 0) {
+    console.log('❌ No DALL-E images found');
+    return;
+  }
+  
+  // Get the last one
+  const lastImage = dalleImages[dalleImages.length - 1];
+  console.log('📸 Found last DALL-E image:', lastImage.src.substring(0, 80) + '...');
+  
+  // Download it
+  try {
+    await handleGeneratedImage(lastImage);
+    console.log('✅ Download triggered!');
+  } catch (error) {
+    console.error('❌ Download failed:', error);
+  }
+}
+
 // Export functions
 window.chatGPTImageDownloader = {
   startImageMonitoring,
@@ -539,9 +571,11 @@ window.chatGPTImageDownloader = {
     console.log('🧹 Cleared downloaded images cache');
   },
   debugCheckAllImages,
+  forceDownloadLastImage, // NEW: Force download for testing
   isGeneratedImage, // Export for debugging
   handleGeneratedImage // Export for debugging
 };
 
 console.log('📥 Image Downloader ready - waiting for image generation request');
 console.log('🔍 Debug with: window.chatGPTImageDownloader.debugCheckAllImages()');
+console.log('💪 Force download: window.chatGPTImageDownloader.forceDownloadLastImage()');
