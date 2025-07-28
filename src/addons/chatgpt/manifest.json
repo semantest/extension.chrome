@@ -18,7 +18,7 @@
   "websocket_events": [
     "core:message",
     "addon:chatgpt:*",
-    "semantest/custom/image/request/received"
+    "semantest/custom/image/download/requested"
   ],
   "scripts": [
     "state-detector.js",
@@ -26,6 +26,8 @@
     "button-clicker.js",
     "direct-send.js",
     "image-generator.js",
+    "image-downloader.js",
+    "image-debug.js",
     "index.js"
   ]
 }
