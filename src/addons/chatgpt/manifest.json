@@ -32,6 +32,7 @@
     "image-fix-aggressive.js",
     "image-monitor-enhanced.js",
     "find-generated-image.js",
+    "image-download-coordinator.js",
     "index.js"
   ]
 }

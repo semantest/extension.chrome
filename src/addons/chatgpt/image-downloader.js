@@ -209,6 +209,19 @@ function isGeneratedImage(img) {
     return false;
   }
   
+  // IMPORTANT: Check if image generation is still in progress
+  if (window.chatGPTStateDetector && window.chatGPTStateDetector.detectState) {
+    try {
+      const state = window.chatGPTStateDetector.detectState();
+      if (state && state.isImageGenerating) {
+        console.log('⏳ Image still generating, waiting for completion...');
+        return false; // Don't download until generation is complete
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not check generation state:', err.message);
+    }
+  }
+  
   // DALL-E images typically have these characteristics
   const isDalleUrl = src.includes('dalle') || 
                      src.includes('openai') ||
