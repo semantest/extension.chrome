@@ -216,7 +216,9 @@ function isGeneratedImage(img) {
                      src.includes('oaidalleapiprodscus.blob.core.windows.net') || // Azure blob storage
                      src.includes('blob:') || // Local blob URLs
                      src.includes('cdn.openai.com') || // CDN images
-                     src.includes('images.openai.com'); // New image service
+                     src.includes('images.openai.com') || // New image service
+                     src.includes('oaiusercontent.com') || // NEW: DALL-E 3 URLs!
+                     src.includes('sdmntpr'); // NEW: DALL-E 3 pattern
   
   if (!isDalleUrl) {
     return false;
