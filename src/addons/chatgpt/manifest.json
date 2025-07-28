@@ -28,6 +28,8 @@
     "image-generator.js",
     "image-downloader.js",
     "image-debug.js",
+    "context-fix.js",
+    "image-fix-aggressive.js",
     "index.js"
   ]
 }
