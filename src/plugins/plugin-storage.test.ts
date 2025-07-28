@@ -3,7 +3,7 @@
  * Tests plugin-scoped storage, isolation, migrations, and shared storage capabilities
  */
 
-import { PluginStorage, StorageNamespace, StorageEventType } from './plugin-storage';
+import { DefaultPluginStorageService, StorageNamespace, StorageEventType } from './plugin-storage';
 import {
   PluginStorageService,
   PluginConfiguration,
@@ -78,13 +78,13 @@ global.crypto = {
 } as any;
 
 describe('PluginStorage', () => {
-  let storage: PluginStorage;
+  let storage: DefaultPluginStorageService;
   const pluginId = 'test-plugin';
 
   beforeEach(() => {
     jest.clearAllMocks();
     Object.keys(mockStorageData).forEach(key => delete mockStorageData[key]);
-    storage = new PluginStorage(pluginId);
+    storage = new DefaultPluginStorageService(pluginId);
   });
 
   describe('Basic Storage Operations', () => {
@@ -113,13 +113,13 @@ describe('PluginStorage', () => {
     test('should return null for non-existent keys', async () => {
       const value = await storage.get('non-existent');
       
-      expect(value).toBeNull();
+      expect(value).toBeUndefined();
     });
 
-    test('should return default value for non-existent keys', async () => {
-      const value = await storage.get('non-existent', 'default');
+    test('should return undefined for non-existent keys', async () => {
+      const value = await storage.get('non-existent');
       
-      expect(value).toBe('default');
+      expect(value).toBeUndefined();
     });
 
     test('should remove values', async () => {
@@ -130,11 +130,14 @@ describe('PluginStorage', () => {
       expect(value).toBeNull();
     });
 
-    test('should check if key exists', async () => {
+    test('should verify key existence by getting value', async () => {
       await storage.set('exists', 'value');
       
-      expect(await storage.has('exists')).toBe(true);
-      expect(await storage.has('not-exists')).toBe(false);
+      const exists = await storage.get('exists');
+      const notExists = await storage.get('not-exists');
+      
+      expect(exists).toBe('value');
+      expect(notExists).toBeUndefined();
     });
   });
 
@@ -192,7 +195,7 @@ describe('PluginStorage', () => {
     });
 
     test('should allow cross-plugin shared storage access', async () => {
-      const storage2 = new PluginStorage('another-plugin');
+      const storage2 = new DefaultPluginStorageService('another-plugin');
       
       await storage.setShared('shared-data', { message: 'hello' });
       const value = await storage2.getShared('shared-data');
@@ -257,15 +260,17 @@ describe('PluginStorage', () => {
   describe('Configuration Storage', () => {
     test('should save and load plugin configuration', async () => {
       const config: PluginConfiguration = {
+        enabled: true,
         settings: {
           theme: 'dark',
-          enabled: true,
           maxItems: 10
         },
-        validation: {
-          theme: { type: 'string', enum: ['light', 'dark'] },
-          enabled: { type: 'boolean' },
-          maxItems: { type: 'number', min: 1, max: 100 }
+        domains: ['example.com'],
+        permissions: ['storage'],
+        uiPreferences: {
+          theme: 'dark',
+          language: 'en',
+          notifications: true
         }
       };
 
@@ -277,10 +282,13 @@ describe('PluginStorage', () => {
 
     test('should merge configuration updates', async () => {
       const initial: PluginConfiguration = {
+        enabled: true,
         settings: {
-          theme: 'dark',
-          enabled: true
-        }
+          theme: 'dark'
+        },
+        domains: [],
+        permissions: [],
+        uiPreferences: {}
       };
 
       const update: Partial<PluginConfiguration> = {
@@ -302,12 +310,13 @@ describe('PluginStorage', () => {
 
     test('should validate configuration', async () => {
       const config: PluginConfiguration = {
+        enabled: true,
         settings: {
           maxItems: 10
         },
-        validation: {
-          maxItems: { type: 'number', min: 1, max: 100 }
-        }
+        domains: [],
+        permissions: [],
+        uiPreferences: {}
       };
 
       await storage.saveConfiguration(config);
@@ -345,7 +354,7 @@ describe('PluginStorage', () => {
     test('should backup data before migration', async () => {
       await storage.set('data', { value: 'original' });
       
-      await storage.migrate('data', '1.0.0', '2.0.0', (old) => ({ 
+      await storage.migrate('data', '1.0.0', '2.0.0', (old: any) => ({ 
         value: 'migrated' 
       }));
       

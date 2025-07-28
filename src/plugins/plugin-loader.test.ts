@@ -216,10 +216,11 @@ describe('PluginLoader', () => {
     });
 
     test('should load plugin from URL', async () => {
+      const pluginUrl = 'https://example.com/plugin.js';
       const manifest = createMockManifest({
-        source: {
-          type: 'url',
-          url: 'https://example.com/plugin.js'
+        entry: {
+          script: pluginUrl,
+          className: 'TestPlugin'
         }
       });
 
@@ -228,17 +229,18 @@ describe('PluginLoader', () => {
         text: jest.fn().mockResolvedValue(mockPluginCode)
       });
 
-      const result = await loader.loadFromURL(manifest.source.url!, manifest);
+      const result = await loader.loadFromURL(pluginUrl, manifest);
 
       expect(result.plugin).toBeDefined();
-      expect(global.fetch).toHaveBeenCalledWith(manifest.source.url);
+      expect(global.fetch).toHaveBeenCalledWith(pluginUrl);
     });
 
     test('should handle URL loading errors', async () => {
+      const pluginUrl = 'https://example.com/plugin.js';
       const manifest = createMockManifest({
-        source: {
-          type: 'url',
-          url: 'https://example.com/plugin.js'
+        entry: {
+          script: pluginUrl,
+          className: 'TestPlugin'
         }
       });
 
@@ -247,19 +249,19 @@ describe('PluginLoader', () => {
         status: 404
       });
 
-      await expect(loader.loadFromURL(manifest.source.url!, manifest))
+      await expect(loader.loadFromURL(pluginUrl, manifest))
         .rejects.toThrow(PluginLoadError);
     });
 
     test('should load inline plugin', async () => {
       const manifest = createMockManifest({
-        source: {
-          type: 'inline',
-          code: mockPluginCode
+        entry: {
+          script: 'inline',
+          className: 'TestPlugin'
         }
       });
 
-      const result = await loader.loadFromInline(manifest.source.code!, manifest);
+      const result = await loader.loadFromInline(mockPluginCode, manifest);
 
       expect(result.plugin).toBeDefined();
     });
@@ -693,11 +695,11 @@ describe('PluginLoader', () => {
 
   describe('Security Features', () => {
     test('should validate trusted sources', async () => {
+      const pluginUrl = 'https://trusted.example.com/plugin.js';
       const manifest = createMockManifest({
-        source: {
-          type: 'url',
-          url: 'https://trusted.example.com/plugin.js',
-          signature: 'valid-signature'
+        entry: {
+          script: pluginUrl,
+          className: 'TestPlugin'
         }
       });
 
@@ -715,7 +717,7 @@ describe('PluginLoader', () => {
       jest.spyOn(loader as any, 'verifySignature').mockResolvedValue(true);
 
       const result = await loader.loadFromURL(
-        manifest.source.url!,
+        pluginUrl,
         manifest,
         { securityPolicy: trustedPolicy }
       );
@@ -724,10 +726,11 @@ describe('PluginLoader', () => {
     });
 
     test('should reject untrusted sources', async () => {
+      const pluginUrl = 'https://untrusted.example.com/plugin.js';
       const manifest = createMockManifest({
-        source: {
-          type: 'url',
-          url: 'https://untrusted.example.com/plugin.js'
+        entry: {
+          script: pluginUrl,
+          className: 'TestPlugin'
         }
       });
 
@@ -738,7 +741,7 @@ describe('PluginLoader', () => {
       };
 
       await expect(loader.loadFromURL(
-        manifest.source.url!,
+        pluginUrl,
         manifest,
         { securityPolicy: trustedPolicy }
       )).rejects.toThrow(PluginSecurityError);
