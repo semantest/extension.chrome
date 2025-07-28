@@ -1,5 +1,5 @@
 // ChatGPT Image Downloader - Downloads generated images automatically
-console.log('📥 ChatGPT Image Downloader loaded');
+// Image Downloader loaded
 
 // Monitor for generated images
 let imageObserver = null;
@@ -13,11 +13,11 @@ let initialMessageCount = 0; // Track message count when monitoring started
 
 function startImageMonitoring() {
   if (monitoringActive) {
-    console.log('🔄 Image monitoring already active');
+    // Already monitoring
     return;
   }
   
-  console.log('👀 Starting enhanced image monitoring...');
+  console.log('👀 Starting image monitoring...');
   monitoringActive = true;
   monitoringStartTime = Date.now();
   expectingImage = true; // We're expecting a new image
@@ -30,7 +30,7 @@ function startImageMonitoring() {
   // Mark as ready immediately - we're looking for NEW images only
   initialMessageCount = document.querySelectorAll('[data-testid="conversation-turn"]').length;
   initialCaptureComplete = true;
-  console.log('✅ Image monitoring started');
+  // Monitoring started
   
   // Method 1: MutationObserver for DOM changes
   // IMPORTANT: Don't start observing until initial capture is complete
@@ -67,7 +67,7 @@ function startImageMonitoring() {
     attributes: true,
     attributeFilter: ['src']
   });
-  console.log('👁️ MutationObserver now active');
+  // MutationObserver active
   
   // Disable periodic check - rely on MutationObserver and coordinator
   // The periodic check was causing old images to download
@@ -79,7 +79,7 @@ function startImageMonitoring() {
   // This should match or exceed the CLI timeout (currently 120s)
   setTimeout(() => {
     stopImageMonitoring();
-    console.log('⏱️ Stopped monitoring after 3 minutes (timeout)');
+    // Timeout after 3 minutes
   }, 180000); // 3 minutes
 }
 
@@ -91,7 +91,7 @@ function stopImageMonitoring() {
   monitoringActive = false;
   expectingImage = false;
   initialCaptureComplete = false;
-  console.log('🛑 Image monitoring stopped');
+  // Monitoring stopped
 }
 
 function checkForImages(element) {
@@ -177,7 +177,7 @@ function isGeneratedImage(img) {
   
   // If it passes basic checks and is in chat area
   if (isInChat && (sizeOk || hasAlt || hasTitle)) {
-    console.log('✅ Detected generated image:', src.substring(0, 50) + '...');
+    // Detected generated image
     return true;
   }
   
@@ -192,11 +192,11 @@ async function handleGeneratedImage(img) {
     return;
   }
   
-  console.log('🖼️ Downloading generated image:', src.substring(0, 50) + '...');
+  console.log('🖼️ Downloading image...');
   
   // Wait for image to fully load if needed
   if (!img.complete) {
-    console.log('⏳ Waiting for image to load...');
+    // Waiting for image to load
     await new Promise((resolve) => {
       img.onload = resolve;
       img.onerror = resolve; // Continue even if error
@@ -212,7 +212,7 @@ async function handleGeneratedImage(img) {
     const result = await downloadImage(img);
     
     if (result.success) {
-      console.log('✅ Image downloaded successfully:', result.filename);
+      console.log('✅ Downloaded:', result.filename);
       
       // Send response back through the bridge
       if (window.semantestBridge && window.semantestBridge.sendToExtension) {
@@ -235,7 +235,7 @@ async function handleGeneratedImage(img) {
       }
       
       // Don't stop monitoring immediately - there might be more images or updates
-      console.log('✅ Image downloaded, continuing to monitor...');
+      // Continue monitoring for more images
     }
   } catch (error) {
     console.error('❌ Failed to download image:', error);
@@ -289,7 +289,7 @@ async function downloadImage(img) {
     } else {
       // For regular URLs, we need to fetch and convert to blob first
       // Direct download doesn't work for cross-origin URLs
-      console.log('📥 Fetching image from URL:', src.substring(0, 50) + '...');
+      // Fetching image from URL
       
       try {
         const response = await fetch(src);
@@ -407,7 +407,7 @@ window.chatGPTImageDownloader = {
   checkForImages,
   clearDownloadedImages: () => {
     downloadedImages.clear();
-    console.log('🧹 Cleared downloaded images cache');
+    // Cleared downloaded images cache
   },
   debugCheckAllImages,
   forceDownloadLastImage, // NEW: Force download for testing
@@ -415,6 +415,4 @@ window.chatGPTImageDownloader = {
   handleGeneratedImage // Export for debugging
 };
 
-console.log('📥 Image Downloader ready - waiting for image generation request');
-console.log('🔍 Debug with: window.chatGPTImageDownloader.debugCheckAllImages()');
-console.log('💪 Force download: window.chatGPTImageDownloader.forceDownloadLastImage()');
+// Image Downloader ready
