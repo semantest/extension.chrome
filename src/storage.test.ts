@@ -72,7 +72,7 @@ describe('WebBuddyStorage', () => {
     
     // Mock successful database initialization
     mockIndexedDB.open.mockImplementation(() => {
-      const request = { ...mockIDBRequest };
+      const request = { ...mockIDBRequest } as any;
       setTimeout(() => {
         request.result = mockIDBDatabase;
         if (request.onsuccess) request.onsuccess();

@@ -621,7 +621,7 @@ export class ContractDiscoveryAdapter {
    */
   private setupMessageHandlers(): void {
     // Listen for contract registration events from the contract library
-    window.addEventListener('web-buddy:contract-registered', (event: CustomEvent) => {
+    window.addEventListener('web-buddy:contract-registered' as any, (event: CustomEvent) => {
       const contract = event.detail;
       this.registerContract(contract);
     });

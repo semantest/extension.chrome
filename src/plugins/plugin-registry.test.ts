@@ -22,8 +22,11 @@ class MockPlugin implements WebBuddyPlugin {
   id: string;
   name: string;
   version: string;
-  metadata: any;
-  capabilities: any;
+  description: string = 'Test plugin';
+  author: string = 'Test Author';
+  metadata: PluginMetadata;
+  capabilities: PluginCapabilities;
+  state: PluginState = 'uninitialized';
 
   private _initialized = false;
   private _active = false;
@@ -69,6 +72,10 @@ class MockPlugin implements WebBuddyPlugin {
 
   async executeCapability(capability: string, params: any): Promise<any> {
     return { success: true };
+  }
+
+  async validateCapability(capability: string, params: any): Promise<{ valid: boolean; errors: string[] }> {
+    return { valid: true, errors: [] };
   }
 
   getUIComponents(): any[] {

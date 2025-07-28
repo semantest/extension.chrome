@@ -389,7 +389,7 @@ export class MessageStore {
 
   private async loadPersistedState(): Promise<void> {
     try {
-      const result = await chrome.storage.local.get(this.persistenceKey);
+      const result = await chrome.storage.local.get([this.persistenceKey]);
       const persistedData = result[this.persistenceKey];
       
       if (persistedData && persistedData.messages && Array.isArray(persistedData.messages)) {

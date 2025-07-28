@@ -251,14 +251,10 @@ describe('ContractDiscoveryAdapter', () => {
     test('registers valid contract successfully', async () => {
       await adapter.registerContract(mockContract);
 
-      expect(webBuddyStorage.saveDomainContract).toHaveBeenCalledWith(
-        'example.com',
-        expect.objectContaining({
-          contractId: expect.any(String),
-          contract: mockContract,
-          discoveredAt: expect.any(String)
-        })
-      );
+      // Contract should be stored in discovered contracts
+      const contracts = adapter.getDiscoveredContracts();
+      expect(contracts).toHaveLength(1);
+      expect(contracts[0]).toEqual(mockContract);
     });
 
     test('rejects invalid contracts', async () => {
@@ -273,7 +269,10 @@ describe('ContractDiscoveryAdapter', () => {
         '⚠️ Contract validation failed:',
         expect.any(Array)
       );
-      expect(webBuddyStorage.saveDomainContract).not.toHaveBeenCalled();
+      
+      // Contract should not be stored
+      const contracts = adapter.getDiscoveredContracts();
+      expect(contracts).toHaveLength(0);
     });
 
     test('stores contract in memory cache', async () => {

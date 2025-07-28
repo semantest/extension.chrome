@@ -116,7 +116,7 @@ export class MessageRouter {
   }
 
   listen(): void {
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener((request: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
       this.route(request, sender)
         .then(sendResponse)
         .catch(error => {

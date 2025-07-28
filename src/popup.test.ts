@@ -79,7 +79,11 @@ global.URL = jest.fn().mockImplementation((url: string) => {
   const validWs = url.startsWith('ws://') || url.startsWith('wss://');
   if (!validWs) throw new Error('Invalid URL');
   return { protocol: url.split(':')[0] + ':' };
-});
+}) as any;
+
+// Add static methods
+(global.URL as any).createObjectURL = jest.fn();
+(global.URL as any).revokeObjectURL = jest.fn();
 
 // Import the class after mocks are set up
 let PopupController: any;
