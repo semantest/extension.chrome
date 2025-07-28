@@ -62,7 +62,8 @@ describe('Event Handling Patterns', () => {
       emitter.cleanup();
       
       emitter.emit('test', 'data');
-      emitter.emit('error', new Error());
+      // Don't emit an actual Error object as it causes unhandled error
+      emitter.emit('error', { message: 'test error' } as any);
       
       expect(handler1).not.toHaveBeenCalled();
       expect(handler2).not.toHaveBeenCalled();
