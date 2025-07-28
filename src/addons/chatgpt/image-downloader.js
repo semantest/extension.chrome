@@ -162,10 +162,14 @@ function isGeneratedImage(img) {
   
   // Check minimum size (generated images are usually larger)
   // Note: naturalWidth/Height might be 0 if image is still loading
-  const minSize = 100; // Lowered threshold
+  const minSize = 200; // Increased threshold to avoid placeholders
   const sizeOk = (img.naturalWidth >= minSize && img.naturalHeight >= minSize) ||
-                 (img.width >= minSize && img.height >= minSize) ||
-                 img.naturalWidth === 0; // Still loading
+                 (img.width >= minSize && img.height >= minSize);
+  
+  // Don't download if image is still loading
+  if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+    return false;
+  }
   
   // Additional checks for generated images
   const hasAlt = img.alt && (img.alt.includes('Generated') || img.alt.includes('DALL'));
@@ -230,10 +234,8 @@ async function handleGeneratedImage(img) {
         }
       }
       
-      // Also stop monitoring after successful download
-      console.log('✅ Download complete, stopping monitoring...');
-      expectingImage = false; // Reset flag
-      stopImageMonitoring();
+      // Don't stop monitoring immediately - there might be more images or updates
+      console.log('✅ Image downloaded, continuing to monitor...');
     }
   } catch (error) {
     console.error('❌ Failed to download image:', error);
