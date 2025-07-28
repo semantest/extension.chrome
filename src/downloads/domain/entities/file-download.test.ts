@@ -284,15 +284,16 @@ describe('FileDownload', () => {
 
       // Simulate progress update
       const progressEvent = new FileDownloadProgress(
-        'progress-correlation-id',
         downloadId,
+        'https://example.com/file.pdf',
+        'file.pdf',
+        'in_progress' as 'in_progress' | 'interrupted' | 'complete',
         5120,
         10240,
-        'in_progress',
         '/downloads/file.pdf'
       );
 
-      fileDownload.updateProgress(progressEvent);
+      await fileDownload.updateProgress(progressEvent);
 
       // Verify internal state updated
       mockChrome.downloads.search.mockImplementation((query, callback) => {
@@ -419,11 +420,11 @@ describe('FileDownload', () => {
 
       // Simulate completion
       const completedEvent = new FileDownloadCompleted(
-        'complete-correlation-id',
         downloadId,
+        'https://example.com/file.pdf',
+        'file.pdf',
         '/downloads/file.pdf',
-        1024,
-        new Date()
+        1024
       );
 
       // Note: FileDownload doesn't have onDownloadCompleted method

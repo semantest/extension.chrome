@@ -21,6 +21,11 @@ export function listen(EventClass: any) {
   };
 }
 
+// Mock Event base class
+export abstract class Event {
+  constructor() {}
+}
+
 // Mock other common exports that might be used
 export class DomainEvent {
   constructor(public readonly correlationId: string) {}

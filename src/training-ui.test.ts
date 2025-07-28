@@ -1,7 +1,18 @@
 /**
- * Unit Tests for Training UI
- * Tests for the training mode UI and pattern learning functionality
+ * Unit tests for training-ui.ts
  */
+
+import {
+  TrainingUI,
+  generateOptimalSelector,
+  generateTrainingText,
+  PatternMatcher,
+  ContextMatcher,
+  PatternValidator,
+  TrainingMessage,
+  AutomationPattern,
+  ExecutionContext
+} from './training-ui';
 
 import { 
   TrainingUI, 
