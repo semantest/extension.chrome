@@ -122,9 +122,17 @@ function isSendButtonEnabled() {
   // Find the send button - it's disabled during image generation
   const sendButton = document.querySelector('button[data-testid="send-button"]') ||
                      document.querySelector('button[aria-label="Send message"]') ||
-                     document.querySelector('#prompt-textarea')?.parentElement?.querySelector('button[type="submit"]');
+                     document.querySelector('#prompt-textarea')?.parentElement?.querySelector('button[type="submit"]') ||
+                     document.querySelector('button[type="submit"]:not([disabled])');
   
-  return sendButton && !sendButton.disabled;
+  if (!sendButton) {
+    console.log('⚠️ Send button not found');
+    return true; // Assume ready if we can't find the button
+  }
+  
+  const isEnabled = !sendButton.disabled;
+  console.log(`🔘 Send button state: ${isEnabled ? 'ENABLED' : 'DISABLED'}`);
+  return isEnabled;
 }
 
 function isGeneratedImage(img) {
@@ -168,8 +176,15 @@ function isGeneratedImage(img) {
   }
   
   // CRITICAL: Check if send button is enabled - this indicates generation is complete
-  if (!isSendButtonEnabled()) {
+  const sendButtonEnabled = isSendButtonEnabled();
+  
+  // Also check if we've been monitoring for a while (fallback)
+  const monitoringDuration = monitoringStartTime ? Date.now() - monitoringStartTime : 0;
+  const hasBeenMonitoringLongEnough = monitoringDuration > 5000; // 5 seconds
+  
+  if (!sendButtonEnabled && !hasBeenMonitoringLongEnough) {
     // Still generating - don't download yet
+    console.log(`⏳ Waiting for completion (monitoring for ${Math.round(monitoringDuration/1000)}s)`);
     return false;
   }
   

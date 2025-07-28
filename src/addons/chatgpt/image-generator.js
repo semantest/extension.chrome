@@ -40,17 +40,40 @@ async function generateImage(promptText) {
       // Now look for "Create image" in the menu
       console.log('🔍 Looking for "Create image" in menu...');
       
-      // Find menu items
-      const menuItems = document.querySelectorAll('[role="menuitem"], [role="option"], button[class*="menu"], div[class*="menu"]');
+      // Find menu items - look for the radix menu that just opened
+      const radixMenu = document.querySelector('[id^="radix-"][role="menu"]') || 
+                        document.querySelector('[data-radix-menu-content]') ||
+                        document.querySelector('[data-state="open"][role="menu"]');
       
       let createImageOption = null;
-      for (const item of menuItems) {
-        const text = item.textContent?.trim() || '';
-        if (text.toLowerCase().includes('create image') || 
-            text.toLowerCase().includes('dall')) {
-          createImageOption = item;
-          console.log('✅ Found "Create image" option:', text);
-          break;
+      
+      if (radixMenu) {
+        // Look specifically within the radix menu
+        const menuItems = radixMenu.querySelectorAll('[role="menuitem"], div[class*="flex"][class*="items-center"]');
+        
+        for (const item of menuItems) {
+          const text = item.textContent?.trim() || '';
+          if (text.toLowerCase().includes('create image') || 
+              text.toLowerCase().includes('dall') ||
+              text.toLowerCase().includes('image')) {
+            createImageOption = item;
+            console.log('✅ Found "Create image" option in menu:', text);
+            break;
+          }
+        }
+      }
+      
+      // Fallback to broader search
+      if (!createImageOption) {
+        const allItems = document.querySelectorAll('[role="menuitem"], [role="option"]');
+        for (const item of allItems) {
+          const text = item.textContent?.trim() || '';
+          if (text.toLowerCase().includes('create image') || 
+              text.toLowerCase().includes('dall')) {
+            createImageOption = item;
+            console.log('✅ Found "Create image" option (fallback):', text);
+            break;
+          }
         }
       }
       
@@ -59,7 +82,20 @@ async function generateImage(promptText) {
         createImageOption.click();
         
         // Wait for image mode to activate
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Verify image mode is active by checking placeholder
+        const verifyInput = document.querySelector('#prompt-textarea') ||
+                           document.querySelector('textarea[placeholder*="image" i]');
+        
+        if (verifyInput) {
+          const placeholder = verifyInput.getAttribute('placeholder') || '';
+          if (placeholder.toLowerCase().includes('image')) {
+            console.log('✅ Image mode activated successfully!');
+          } else {
+            console.log('⚠️ Image mode may not be active, but continuing...');
+          }
+        }
         
         // Now enter the prompt
         return await enterImagePrompt(promptText);
