@@ -1,12 +1,38 @@
 /**
- * Unit Tests for FileDownload Entity
- * Tests for file download operations and state management
+ * @jest-environment jsdom
  */
+
+// Mock @typescript-eda/core
+jest.mock('@typescript-eda/core', () => ({
+  Entity: class Entity<T> {
+    constructor() {}
+  },
+  listen: (eventClass: any) => {
+    return (target: any, propertyName: string, descriptor: PropertyDescriptor) => {
+      return descriptor;
+    };
+  }
+}));
+
+// Mock chrome.downloads API
+const mockDownload = jest.fn();
+const mockSearch = jest.fn();
+
+global.chrome = {
+  downloads: {
+    download: mockDownload,
+    search: mockSearch
+  },
+  runtime: {
+    lastError: null
+  }
+} as any;
 
 import { FileDownload } from './file-download';
 import {
   FileDownloadRequested,
   FileDownloadStarted,
+  FileDownloadCompleted,
   FileDownloadFailed,
   FileDownloadProgress,
   FileDownloadStatusRequested,
@@ -15,310 +41,125 @@ import {
   DownloadListProvided
 } from '../events/download-events';
 
-// Mock chrome.downloads API
-const mockChrome = {
-  downloads: {
-    download: jest.fn(),
-    search: jest.fn()
-  },
-  runtime: {
-    lastError: null as any
-  }
-};
 
-// Replace global chrome with mock
-(global as any).chrome = mockChrome;
-
-// Mock the base classes for the download events
-jest.mock('../events/download-events', () => {
-  // Define MockEvent inside the factory function
-  class MockEvent {
-    constructor(...args: any[]) {}
-  }
-
-  return {
-  FileDownloadRequested: class extends MockEvent {},
-  FileDownloadStarted: class extends MockEvent {
-    constructor(
-      public correlationId: string,
-      public downloadId: number,
-      public url: string,
-      public filename: string
-    ) {
-      super();
-    }
-  },
-  FileDownloadFailed: class extends MockEvent {
-    constructor(
-      public correlationId: string,
-      public url: string,
-      public error: string,
-      public downloadId?: number
-    ) {
-      super();
-    }
-  },
-  FileDownloadProgress: class extends MockEvent {
-    constructor(
-      public downloadId: number,
-      public url: string,
-      public filename: string,
-      public state: 'in_progress' | 'interrupted' | 'complete',
-      public bytesReceived: number,
-      public totalBytes: number,
-      public filepath?: string,
-      public error?: string
-    ) {
-      super();
-    }
-  },
-  FileDownloadStatusRequested: class extends MockEvent {
-    constructor(
-      public correlationId: string,
-      public downloadId?: number
-    ) {
-      super();
-    }
-  },
-  FileDownloadListRequested: class extends MockEvent {
-    constructor(
-      public correlationId: string,
-      public query?: any
-    ) {
-      super();
-    }
-  },
-  DownloadStatusProvided: class extends MockEvent {
-    constructor(
-      public correlationId: string,
-      public status: any
-    ) {
-      super();
-    }
-  },
-  DownloadListProvided: class extends MockEvent {
-    constructor(
-      public correlationId: string,
-      public downloads: any[]
-    ) {
-      super();
-    }
-  }
-  };
-});
-
-// Mock the FileDownload entity since it depends on @typescript-eda/core
-jest.mock('./file-download', () => {
-  return {
-    FileDownload: jest.fn().mockImplementation(() => {
-      let downloadId: number | null = null;
-      let url = '';
-      let filename = '';
-      let state: 'pending' | 'in_progress' | 'interrupted' | 'complete' = 'pending';
-      let bytesReceived = 0;
-      let totalBytes = 0;
-      let error: string | null = null;
-      let startTime: Date | null = null;
-      let endTime: Date | null = null;
-      let filepath = '';
-
-      return {
-        startDownload: jest.fn().mockImplementation(async (event: any) => {
-          const { FileDownloadStarted, FileDownloadFailed } = require('../events/download-events');
-          
-          try {
-            url = event.url;
-            filename = event.filename || event.url.split('/').pop() || 'download.unknown';
-            if (!filename.includes('.')) filename += '.unknown';
-            state = 'pending';
-            startTime = new Date();
-
-            return new Promise((resolve) => {
-              mockChrome.downloads.download({ 
-                url: event.url,
-                filename: event.filename,
-                conflictAction: event.conflictAction || 'uniquify',
-                saveAs: event.saveAs || false
-              }, (id: number | undefined) => {
-                if (mockChrome.runtime.lastError) {
-                  error = mockChrome.runtime.lastError.message || 'Unknown download error';
-                  state = 'interrupted';
-                  resolve(new FileDownloadFailed(
-                    event.correlationId,
-                    url,
-                    error
-                  ));
-                  return;
-                }
-
-                downloadId = id || 0;
-                state = 'in_progress';
-                resolve(new FileDownloadStarted(
-                  event.correlationId,
-                  downloadId,
-                  url,
-                  filename
-                ));
-              });
-            });
-          } catch (err) {
-            error = err instanceof Error ? err.message : 'Download initialization failed';
-            state = 'interrupted';
-            return new FileDownloadFailed(
-              event.correlationId,
-              url,
-              error
-            );
-          }
-        }),
-
-        updateProgress: jest.fn().mockImplementation(async (event: any) => {
-          if (event.downloadId === downloadId) {
-            bytesReceived = event.bytesReceived;
-            totalBytes = event.totalBytes;
-            state = event.state;
-            
-            if (event.state === 'complete') {
-              endTime = new Date();
-              filepath = event.filepath || '';
-            } else if (event.state === 'interrupted') {
-              error = event.error || 'Download interrupted';
-            }
-          }
-          return Promise.resolve();
-        }),
-
-        getDownloadStatus: jest.fn().mockImplementation(async (event: any) => {
-          const { DownloadStatusProvided } = require('../events/download-events');
-          
-          if (event.downloadId && event.downloadId !== downloadId) {
-            return new Promise((resolve) => {
-              mockChrome.downloads.search({ id: event.downloadId }, (downloads: any[]) => {
-                const download = downloads[0];
-                if (download) {
-                  resolve(new DownloadStatusProvided(
-                    event.correlationId,
-                    {
-                      downloadId: download.id,
-                      url: download.url,
-                      filename: download.filename,
-                      state: download.state,
-                      bytesReceived: download.bytesReceived,
-                      totalBytes: download.totalBytes,
-                      exists: download.exists,
-                      paused: download.paused,
-                      error: download.error
-                    }
-                  ));
-                } else {
-                  resolve(new DownloadStatusProvided(
-                    event.correlationId,
-                    {
-                      downloadId: event.downloadId!,
-                      url: '',
-                      filename: '',
-                      state: 'interrupted',
-                      bytesReceived: 0,
-                      totalBytes: 0,
-                      error: 'Download not found'
-                    }
-                  ));
-                }
-              });
-            });
-          }
-
-          return new DownloadStatusProvided(
-            event.correlationId,
-            {
-              downloadId: downloadId || 0,
-              url: url,
-              filename: filename,
-              state: state,
-              bytesReceived: bytesReceived,
-              totalBytes: totalBytes,
-              exists: state === 'complete',
-              paused: false,
-              error: error || undefined
-            }
-          );
-        }),
-
-        getDownloadsList: jest.fn().mockImplementation(async (event: any) => {
-          const { DownloadListProvided } = require('../events/download-events');
-          
-          return new Promise((resolve) => {
-            const query = {
-              orderBy: event.query?.orderBy || ['-startTime'],
-              limit: event.query?.limit || 100,
-              state: event.query?.state
-            };
-
-            mockChrome.downloads.search(query, (downloads: any[]) => {
-              const downloadList = downloads.map(download => ({
-                id: download.id,
-                url: download.url,
-                filename: download.filename,
-                state: download.state,
-                bytesReceived: download.bytesReceived,
-                totalBytes: download.totalBytes,
-                startTime: download.startTime,
-                endTime: download.endTime
-              }));
-
-              resolve(new DownloadListProvided(
-                event.correlationId,
-                downloadList
-              ));
-            });
-          });
-        }),
-
-        getState: jest.fn(() => state),
-        getProgressPercentage: jest.fn(() => {
-          if (totalBytes === 0) return 0;
-          return Math.round((bytesReceived / totalBytes) * 100);
-        }),
-        getFilepath: jest.fn(() => filepath),
-        isCompleted: jest.fn(() => state === 'complete' && filepath !== ''),
-        extractFilenameFromUrl: jest.fn((urlStr: string) => {
-          try {
-            const urlObj = new URL(urlStr);
-            const pathname = urlObj.pathname;
-            const fname = pathname.split('/').pop() || 'download';
-            return fname.includes('.') ? fname : `${fname}.unknown`;
-          } catch {
-            return 'download.unknown';
-          }
-        })
-      };
-    })
-  };
-});
-
-describe('FileDownload', () => {
+describe('FileDownload Entity', () => {
   let fileDownload: FileDownload;
 
   beforeEach(() => {
     fileDownload = new FileDownload();
     jest.clearAllMocks();
-    mockChrome.runtime.lastError = null;
+    (chrome.runtime as any).lastError = null;
   });
 
   describe('startDownload', () => {
-    test('should start download successfully', async () => {
-      const downloadId = 123;
-      mockChrome.downloads.download.mockImplementation((options, callback) => {
-        callback(downloadId);
+    it('should start a download successfully', async () => {
+      const event = new FileDownloadRequested(
+        'corr-123',
+        'https://example.com/file.pdf',
+        'document.pdf',
+        'uniquify',
+        false
+      );
+
+      mockDownload.mockImplementation((options, callback) => {
+        callback(123);
       });
 
-      const event = new FileDownloadRequested('corr-1', 'https://example.com/file.pdf');
       const result = await fileDownload.startDownload(event);
 
       expect(result).toBeInstanceOf(FileDownloadStarted);
-      expect((result as FileDownloadStarted).downloadId).toBe(downloadId);
+      expect((result as FileDownloadStarted).correlationId).toBe('corr-123');
+      expect((result as FileDownloadStarted).downloadId).toBe(123);
       expect((result as FileDownloadStarted).url).toBe('https://example.com/file.pdf');
-      expect(mockChrome.downloads.download).toHaveBeenCalledWith({
+      expect((result as FileDownloadStarted).filename).toBe('document.pdf');
+
+      expect(mockDownload).toHaveBeenCalledWith({
+        url: 'https://example.com/file.pdf',
+        filename: 'document.pdf',
+        conflictAction: 'uniquify',
+        saveAs: false
+      }, expect.any(Function));
+    });
+
+    it('should extract filename from URL when not provided', async () => {
+      const event = new FileDownloadRequested(
+        'corr-456',
+        'https://example.com/path/to/myfile.zip'
+      );
+
+      mockDownload.mockImplementation((options, callback) => {
+        callback(456);
+      });
+
+      const result = await fileDownload.startDownload(event);
+
+      expect(result).toBeInstanceOf(FileDownloadStarted);
+      expect((result as FileDownloadStarted).filename).toBe('myfile.zip');
+    });
+
+    it('should handle URL without extension', async () => {
+      const event = new FileDownloadRequested(
+        'corr-789',
+        'https://example.com/download'
+      );
+
+      mockDownload.mockImplementation((options, callback) => {
+        callback(789);
+      });
+
+      const result = await fileDownload.startDownload(event);
+
+      expect(result).toBeInstanceOf(FileDownloadStarted);
+      expect((result as FileDownloadStarted).filename).toBe('download.unknown');
+    });
+
+    it('should handle Chrome runtime error', async () => {
+      const event = new FileDownloadRequested(
+        'corr-error',
+        'https://example.com/file.pdf'
+      );
+
+      (chrome.runtime as any).lastError = { message: 'Network error' };
+      mockDownload.mockImplementation((options, callback) => {
+        callback(undefined);
+      });
+
+      const result = await fileDownload.startDownload(event);
+
+      expect(result).toBeInstanceOf(FileDownloadFailed);
+      expect((result as FileDownloadFailed).correlationId).toBe('corr-error');
+      expect((result as FileDownloadFailed).error).toBe('Network error');
+    });
+
+    it('should handle exception during download', async () => {
+      const event = new FileDownloadRequested(
+        'corr-exception',
+        'https://example.com/file.pdf'
+      );
+
+      mockDownload.mockImplementation(() => {
+        throw new Error('Download API failed');
+      });
+
+      const result = await fileDownload.startDownload(event);
+
+      expect(result).toBeInstanceOf(FileDownloadFailed);
+      expect((result as FileDownloadFailed).error).toBe('Download API failed');
+    });
+
+    it('should use default values when optional parameters not provided', async () => {
+      const event = new FileDownloadRequested(
+        'corr-defaults',
+        'https://example.com/file.pdf'
+      );
+
+      mockDownload.mockImplementation((options, callback) => {
+        callback(999);
+      });
+
+      await fileDownload.startDownload(event);
+
+      expect(mockDownload).toHaveBeenCalledWith({
         url: 'https://example.com/file.pdf',
         filename: undefined,
         conflictAction: 'uniquify',
@@ -326,171 +167,114 @@ describe('FileDownload', () => {
       }, expect.any(Function));
     });
 
-    test('should use provided filename', async () => {
-      const downloadId = 124;
-      mockChrome.downloads.download.mockImplementation((options, callback) => {
-        callback(downloadId);
-      });
-
+    it('should handle invalid URL gracefully', async () => {
       const event = new FileDownloadRequested(
-        'corr-2',
-        'https://example.com/file.pdf',
-        'custom-name.pdf',
-        'overwrite',
-        true
+        'corr-invalid',
+        'not-a-valid-url'
       );
-      
-      const result = await fileDownload.startDownload(event);
 
-      expect((result as FileDownloadStarted).filename).toBe('custom-name.pdf');
-      expect(mockChrome.downloads.download).toHaveBeenCalledWith({
-        url: 'https://example.com/file.pdf',
-        filename: 'custom-name.pdf',
-        conflictAction: 'overwrite',
-        saveAs: true
-      }, expect.any(Function));
-    });
-
-    test('should handle download failure with lastError', async () => {
-      mockChrome.runtime.lastError = { message: 'Download blocked' };
-      mockChrome.downloads.download.mockImplementation((options, callback) => {
-        callback(undefined);
+      mockDownload.mockImplementation((options, callback) => {
+        callback(111);
       });
 
-      const event = new FileDownloadRequested('corr-3', 'https://example.com/file.pdf');
       const result = await fileDownload.startDownload(event);
 
-      expect(result).toBeInstanceOf(FileDownloadFailed);
-      expect((result as FileDownloadFailed).error).toBe('Download blocked');
-    });
-
-    test('should handle download initialization exception', async () => {
-      mockChrome.downloads.download.mockImplementation(() => {
-        throw new Error('API not available');
-      });
-
-      const event = new FileDownloadRequested('corr-4', 'https://example.com/file.pdf');
-      const result = await fileDownload.startDownload(event);
-
-      expect(result).toBeInstanceOf(FileDownloadFailed);
-      expect((result as FileDownloadFailed).error).toBe('API not available');
-    });
-
-    test('should extract filename from URL when not provided', async () => {
-      const downloadId = 125;
-      mockChrome.downloads.download.mockImplementation((options, callback) => {
-        callback(downloadId);
-      });
-
-      const event = new FileDownloadRequested('corr-5', 'https://example.com/documents/report.xlsx');
-      const result = await fileDownload.startDownload(event);
-
-      expect((result as FileDownloadStarted).filename).toBe('report.xlsx');
-    });
-
-    test('should handle URL without filename', async () => {
-      const downloadId = 126;
-      mockChrome.downloads.download.mockImplementation((options, callback) => {
-        callback(downloadId);
-      });
-
-      const event = new FileDownloadRequested('corr-6', 'https://example.com/');
-      const result = await fileDownload.startDownload(event);
-
+      expect(result).toBeInstanceOf(FileDownloadStarted);
       expect((result as FileDownloadStarted).filename).toBe('download.unknown');
     });
   });
 
   describe('updateProgress', () => {
-    test('should update download progress', async () => {
-      // First start a download
-      mockChrome.downloads.download.mockImplementation((options, callback) => {
+    beforeEach(async () => {
+      // Start a download first
+      const startEvent = new FileDownloadRequested(
+        'corr-setup',
+        'https://example.com/file.pdf'
+      );
+      mockDownload.mockImplementation((options, callback) => {
         callback(123);
       });
-      const startEvent = new FileDownloadRequested('corr-1', 'https://example.com/file.pdf');
       await fileDownload.startDownload(startEvent);
-
-      // Update progress
+    });
+    it('should update progress for matching download', async () => {
       const progressEvent = new FileDownloadProgress(
         123,
         'https://example.com/file.pdf',
         'file.pdf',
         'in_progress',
-        50000,
-        100000
+        500000,
+        1000000
       );
+
       await fileDownload.updateProgress(progressEvent);
 
       expect(fileDownload.getProgressPercentage()).toBe(50);
       expect(fileDownload.getState()).toBe('in_progress');
     });
 
-    test('should handle download completion', async () => {
-      // Start download
-      mockChrome.downloads.download.mockImplementation((options, callback) => {
-        callback(123);
-      });
-      const startEvent = new FileDownloadRequested('corr-1', 'https://example.com/file.pdf');
-      await fileDownload.startDownload(startEvent);
-
-      // Complete download
-      const completeEvent = new FileDownloadProgress(
+    it('should handle download completion', async () => {
+      const progressEvent = new FileDownloadProgress(
         123,
         'https://example.com/file.pdf',
         'file.pdf',
         'complete',
-        100000,
-        100000,
+        1000000,
+        1000000,
         '/downloads/file.pdf'
       );
-      await fileDownload.updateProgress(completeEvent);
+
+      await fileDownload.updateProgress(progressEvent);
 
       expect(fileDownload.getState()).toBe('complete');
       expect(fileDownload.getFilepath()).toBe('/downloads/file.pdf');
       expect(fileDownload.isCompleted()).toBe(true);
+      expect(fileDownload.getProgressPercentage()).toBe(100);
     });
 
-    test('should handle download interruption', async () => {
-      // Start download
-      mockChrome.downloads.download.mockImplementation((options, callback) => {
-        callback(123);
-      });
-      const startEvent = new FileDownloadRequested('corr-1', 'https://example.com/file.pdf');
-      await fileDownload.startDownload(startEvent);
-
-      // Interrupt download
-      const interruptEvent = new FileDownloadProgress(
+    it('should handle download interruption', async () => {
+      const progressEvent = new FileDownloadProgress(
         123,
         'https://example.com/file.pdf',
         'file.pdf',
         'interrupted',
-        50000,
-        100000,
+        300000,
+        1000000,
         undefined,
-        'Network failure'
+        'Disk full'
       );
-      await fileDownload.updateProgress(interruptEvent);
+
+      await fileDownload.updateProgress(progressEvent);
 
       expect(fileDownload.getState()).toBe('interrupted');
+      expect(fileDownload.isCompleted()).toBe(false);
     });
 
-    test('should ignore progress updates for different download IDs', async () => {
-      // Start download
-      mockChrome.downloads.download.mockImplementation((options, callback) => {
-        callback(123);
-      });
-      const startEvent = new FileDownloadRequested('corr-1', 'https://example.com/file.pdf');
-      await fileDownload.startDownload(startEvent);
-
-      // Update progress for different download
+    it('should ignore progress for different download ID', async () => {
       const progressEvent = new FileDownloadProgress(
         999, // Different ID
         'https://example.com/other.pdf',
         'other.pdf',
-        'in_progress',
-        50000,
-        100000
+        'complete',
+        1000000,
+        1000000
       );
+
+      await fileDownload.updateProgress(progressEvent);
+
+      expect(fileDownload.getState()).toBe('in_progress'); // Unchanged
+      expect(fileDownload.getProgressPercentage()).toBe(0);
+    });
+
+    it('should handle zero total bytes', async () => {
+      const progressEvent = new FileDownloadProgress(
+        123,
+        'https://example.com/file.pdf',
+        'file.pdf',
+        'in_progress',
+        0,
+        0
+      );
+
       await fileDownload.updateProgress(progressEvent);
 
       expect(fileDownload.getProgressPercentage()).toBe(0);
@@ -498,145 +282,16 @@ describe('FileDownload', () => {
   });
 
   describe('getDownloadStatus', () => {
-    test('should return current instance status', async () => {
-      // Start download
-      mockChrome.downloads.download.mockImplementation((options, callback) => {
+    it('should return status for current download', async () => {
+      // Start a download
+      const startEvent = new FileDownloadRequested(
+        'corr-start',
+        'https://example.com/file.pdf',
+        'file.pdf'
+      );
+      mockDownload.mockImplementation((options, callback) => {
         callback(123);
       });
-      const startEvent = new FileDownloadRequested('corr-1', 'https://example.com/file.pdf');
-      await fileDownload.startDownload(startEvent);
-
-      const statusEvent = new FileDownloadStatusRequested('status-1');
-      const result = await fileDownload.getDownloadStatus(statusEvent);
-
-      expect(result).toBeInstanceOf(DownloadStatusProvided);
-      expect(result.status.downloadId).toBe(123);
-      expect(result.status.url).toBe('https://example.com/file.pdf');
-      expect(result.status.state).toBe('in_progress');
-    });
-
-    test('should query specific download by ID', async () => {
-      const mockDownload = {
-        id: 456,
-        url: 'https://example.com/other.pdf',
-        filename: '/downloads/other.pdf',
-        state: 'complete',
-        bytesReceived: 200000,
-        totalBytes: 200000,
-        exists: true,
-        paused: false,
-        error: undefined
-      };
-      mockChrome.downloads.search.mockImplementation((query, callback) => {
-        callback([mockDownload]);
-      });
-
-      const statusEvent = new FileDownloadStatusRequested('status-2', 456);
-      const result = await fileDownload.getDownloadStatus(statusEvent);
-
-      expect(mockChrome.downloads.search).toHaveBeenCalledWith({ id: 456 }, expect.any(Function));
-      expect(result.status.downloadId).toBe(456);
-      expect(result.status.state).toBe('complete');
-      expect(result.status.exists).toBe(true);
-    });
-
-    test('should handle download not found', async () => {
-      mockChrome.downloads.search.mockImplementation((query, callback) => {
-        callback([]);
-      });
-
-      const statusEvent = new FileDownloadStatusRequested('status-3', 999);
-      const result = await fileDownload.getDownloadStatus(statusEvent);
-
-      expect(result.status.downloadId).toBe(999);
-      expect(result.status.state).toBe('interrupted');
-      expect(result.status.error).toBe('Download not found');
-    });
-  });
-
-  describe('getDownloadsList', () => {
-    test('should return list of downloads', async () => {
-      const mockDownloads = [
-        {
-          id: 1,
-          url: 'https://example.com/file1.pdf',
-          filename: '/downloads/file1.pdf',
-          state: 'complete',
-          bytesReceived: 100000,
-          totalBytes: 100000,
-          startTime: '2023-01-01T10:00:00',
-          endTime: '2023-01-01T10:01:00'
-        },
-        {
-          id: 2,
-          url: 'https://example.com/file2.pdf',
-          filename: '/downloads/file2.pdf',
-          state: 'in_progress',
-          bytesReceived: 50000,
-          totalBytes: 100000,
-          startTime: '2023-01-01T10:02:00',
-          endTime: undefined
-        }
-      ];
-      mockChrome.downloads.search.mockImplementation((query, callback) => {
-        callback(mockDownloads);
-      });
-
-      const listEvent = new FileDownloadListRequested('list-1');
-      const result = await fileDownload.getDownloadsList(listEvent);
-
-      expect(result).toBeInstanceOf(DownloadListProvided);
-      expect(result.downloads).toHaveLength(2);
-      expect(result.downloads[0].id).toBe(1);
-      expect(result.downloads[1].state).toBe('in_progress');
-    });
-
-    test('should apply query filters', async () => {
-      mockChrome.downloads.search.mockImplementation((query, callback) => {
-        callback([]);
-      });
-
-      const listEvent = new FileDownloadListRequested('list-2', {
-        state: 'complete',
-        limit: 50,
-        orderBy: ['-endTime']
-      });
-      await fileDownload.getDownloadsList(listEvent);
-
-      expect(mockChrome.downloads.search).toHaveBeenCalledWith({
-        orderBy: ['-endTime'],
-        limit: 50,
-        state: 'complete'
-      }, expect.any(Function));
-    });
-
-    test('should use default query parameters', async () => {
-      mockChrome.downloads.search.mockImplementation((query, callback) => {
-        callback([]);
-      });
-
-      const listEvent = new FileDownloadListRequested('list-3');
-      await fileDownload.getDownloadsList(listEvent);
-
-      expect(mockChrome.downloads.search).toHaveBeenCalledWith({
-        orderBy: ['-startTime'],
-        limit: 100,
-        state: undefined
-      }, expect.any(Function));
-    });
-  });
-
-  describe('Helper methods', () => {
-    test('getProgressPercentage should handle zero total bytes', () => {
-      expect(fileDownload.getProgressPercentage()).toBe(0);
-    });
-
-    test('getProgressPercentage should calculate percentage correctly', async () => {
-      // Start download
-      mockChrome.downloads.download.mockImplementation((options, callback) => {
-        callback(123);
-      });
-      const startEvent = new FileDownloadRequested('corr-1', 'https://example.com/file.pdf');
       await fileDownload.startDownload(startEvent);
 
       // Update progress
@@ -645,36 +300,171 @@ describe('FileDownload', () => {
         'https://example.com/file.pdf',
         'file.pdf',
         'in_progress',
-        75000,
-        100000
+        500000,
+        1000000
       );
       await fileDownload.updateProgress(progressEvent);
 
-      expect(fileDownload.getProgressPercentage()).toBe(75);
+      // Request status
+      const statusEvent = new FileDownloadStatusRequested('corr-status');
+      const result = await fileDownload.getDownloadStatus(statusEvent);
+
+      expect(result).toBeInstanceOf(DownloadStatusProvided);
+      expect(result.correlationId).toBe('corr-status');
+      expect(result.status.downloadId).toBe(123);
+      expect(result.status.url).toBe('https://example.com/file.pdf');
+      expect(result.status.filename).toBe('file.pdf');
+      expect(result.status.state).toBe('in_progress');
+      expect(result.status.bytesReceived).toBe(500000);
+      expect(result.status.totalBytes).toBe(1000000);
+      expect(result.status.exists).toBe(false);
+      expect(result.status.paused).toBe(false);
     });
 
-    test('extractFilenameFromUrl should handle various URL formats', () => {
-      const download = new FileDownload();
-      
-      // Access private method through any type casting
-      const extractFilename = (download as any).extractFilenameFromUrl.bind(download);
-      
-      expect(extractFilename('https://example.com/files/document.pdf')).toBe('document.pdf');
-      expect(extractFilename('https://example.com/files/')).toBe('download.unknown');
-      expect(extractFilename('https://example.com')).toBe('download.unknown');
-      expect(extractFilename('invalid-url')).toBe('download.unknown');
-      expect(extractFilename('https://example.com/file-without-extension')).toBe('file-without-extension.unknown');
+    it('should query Chrome API for different download ID', async () => {
+      const chromeDownload = {
+        id: 456,
+        url: 'https://example.com/other.pdf',
+        filename: 'other.pdf',
+        state: 'complete',
+        bytesReceived: 2000000,
+        totalBytes: 2000000,
+        exists: true,
+        paused: false,
+        error: undefined
+      };
+
+      mockSearch.mockImplementation((query, callback) => {
+        callback([chromeDownload]);
+      });
+
+      const statusEvent = new FileDownloadStatusRequested('corr-other', 456);
+      const result = await fileDownload.getDownloadStatus(statusEvent);
+
+      expect(mockSearch).toHaveBeenCalledWith({ id: 456 }, expect.any(Function));
+      expect(result.status.downloadId).toBe(456);
+      expect(result.status.url).toBe('https://example.com/other.pdf');
+      expect(result.status.state).toBe('complete');
+      expect(result.status.exists).toBe(true);
     });
 
-    test('isCompleted should return false for incomplete downloads', () => {
+    it('should handle download not found', async () => {
+      mockSearch.mockImplementation((query, callback) => {
+        callback([]);
+      });
+
+      const statusEvent = new FileDownloadStatusRequested('corr-notfound', 999);
+      const result = await fileDownload.getDownloadStatus(statusEvent);
+
+      expect(result.status.downloadId).toBe(999);
+      expect(result.status.state).toBe('interrupted');
+      expect(result.status.error).toBe('Download not found');
+    });
+
+    it('should return initial state when no download started', async () => {
+      const statusEvent = new FileDownloadStatusRequested('corr-initial');
+      const result = await fileDownload.getDownloadStatus(statusEvent);
+
+      expect(result.status.downloadId).toBe(0);
+      expect(result.status.url).toBe('');
+      expect(result.status.filename).toBe('');
+      expect(result.status.state).toBe('pending');
+      expect(result.status.bytesReceived).toBe(0);
+      expect(result.status.totalBytes).toBe(0);
+    });
+  });
+
+  describe('getDownloadsList', () => {
+    it('should return list of downloads with default query', async () => {
+      const downloads = [
+        {
+          id: 1,
+          url: 'https://example.com/file1.pdf',
+          filename: 'file1.pdf',
+          state: 'complete',
+          bytesReceived: 1000000,
+          totalBytes: 1000000,
+          startTime: '2024-01-15T10:00:00.000Z',
+          endTime: '2024-01-15T10:05:00.000Z'
+        },
+        {
+          id: 2,
+          url: 'https://example.com/file2.zip',
+          filename: 'file2.zip',
+          state: 'in_progress',
+          bytesReceived: 500000,
+          totalBytes: 2000000,
+          startTime: '2024-01-15T10:10:00.000Z',
+          endTime: undefined
+        }
+      ];
+
+      mockSearch.mockImplementation((query, callback) => {
+        callback(downloads);
+      });
+
+      const listEvent = new FileDownloadListRequested('corr-list');
+      const result = await fileDownload.getDownloadsList(listEvent);
+
+      expect(mockSearch).toHaveBeenCalledWith({
+        orderBy: ['-startTime'],
+        limit: 100,
+        state: undefined
+      }, expect.any(Function));
+
+      expect(result).toBeInstanceOf(DownloadListProvided);
+      expect(result.correlationId).toBe('corr-list');
+      expect(result.downloads).toHaveLength(2);
+      expect(result.downloads[0].id).toBe(1);
+      expect(result.downloads[1].id).toBe(2);
+    });
+
+    it('should apply custom query parameters', async () => {
+      mockSearch.mockImplementation((query, callback) => {
+        callback([]);
+      });
+
+      const listEvent = new FileDownloadListRequested('corr-custom', {
+        orderBy: ['filename'],
+        limit: 50,
+        state: 'complete'
+      });
+      
+      await fileDownload.getDownloadsList(listEvent);
+
+      expect(mockSearch).toHaveBeenCalledWith({
+        orderBy: ['filename'],
+        limit: 50,
+        state: 'complete'
+      }, expect.any(Function));
+    });
+
+    it('should handle empty downloads list', async () => {
+      mockSearch.mockImplementation((query, callback) => {
+        callback([]);
+      });
+
+      const listEvent = new FileDownloadListRequested('corr-empty');
+      const result = await fileDownload.getDownloadsList(listEvent);
+
+      expect(result.downloads).toHaveLength(0);
+    });
+  });
+
+  describe('helper methods', () => {
+    it('should correctly calculate progress percentage', () => {
+      expect(fileDownload.getProgressPercentage()).toBe(0);
+    });
+
+    it('should return correct completion status', () => {
       expect(fileDownload.isCompleted()).toBe(false);
     });
 
-    test('getFilepath should return empty string initially', () => {
+    it('should return empty filepath initially', () => {
       expect(fileDownload.getFilepath()).toBe('');
     });
 
-    test('getState should return pending initially', () => {
+    it('should return pending state initially', () => {
       expect(fileDownload.getState()).toBe('pending');
     });
   });
