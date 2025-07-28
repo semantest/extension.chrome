@@ -118,6 +118,15 @@ function checkForImages(element) {
   }
 }
 
+function isSendButtonEnabled() {
+  // Find the send button - it's disabled during image generation
+  const sendButton = document.querySelector('button[data-testid="send-button"]') ||
+                     document.querySelector('button[aria-label="Send message"]') ||
+                     document.querySelector('#prompt-textarea')?.parentElement?.querySelector('button[type="submit"]');
+  
+  return sendButton && !sendButton.disabled;
+}
+
 function isGeneratedImage(img) {
   // Check if this is a DALL-E generated image
   const src = img.src || '';
@@ -131,9 +140,6 @@ function isGeneratedImage(img) {
   if (downloadedImages.has(src)) {
     return false;
   }
-  
-  // Skip this check - it's preventing downloads
-  // The coordinator will handle timing based on state changes
   
   // DALL-E images typically have these characteristics
   const isDalleUrl = src.includes('dalle') || 
@@ -157,32 +163,26 @@ function isGeneratedImage(img) {
                    img.closest('[class*="result"]') ||
                    img.closest('div[class*="markdown"]');
   
-  // Simple check: is this in a message?
-  const messageContainer = img.closest('[data-testid="conversation-turn"]');
-  
-  // Check minimum size (generated images are usually larger)
-  // DALL-E 3 images are typically 1024x1024 or 1792x1024
-  const minSize = 512; // Much higher threshold to avoid early downloads
-  
-  // Don't download if image is still loading or too small
-  if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+  if (!isInChat) {
     return false;
   }
   
-  // Require proper size - don't rely on alt/title alone
+  // CRITICAL: Check if send button is enabled - this indicates generation is complete
+  if (!isSendButtonEnabled()) {
+    // Still generating - don't download yet
+    return false;
+  }
+  
+  // Basic size check to avoid tiny images
+  const minSize = 100; // Lower threshold since we rely on send button state
+  if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+    return false; // Image not loaded yet
+  }
+  
   const sizeOk = img.naturalWidth >= minSize && img.naturalHeight >= minSize;
   
-  if (!sizeOk) {
-    // Too small - likely a placeholder or still generating
-    return false;
-  }
-  
-  // Additional checks for generated images
-  const hasAlt = img.alt && (img.alt.includes('Generated') || img.alt.includes('DALL'));
-  const hasTitle = img.title && (img.title.includes('Generated') || img.title.includes('DALL'));
-  
-  // Only download if it's properly sized AND in chat area
-  if (isInChat && sizeOk) {
+  // If send button is enabled and image has reasonable size, it's ready
+  if (sizeOk) {
     // Detected complete generated image
     return true;
   }
@@ -209,9 +209,6 @@ async function handleGeneratedImage(img) {
       setTimeout(resolve, 5000); // Timeout after 5 seconds
     });
   }
-  
-  // Extra safety: wait a bit more to ensure image is stable
-  await new Promise(resolve => setTimeout(resolve, 1000));
   
   // Mark as downloaded to prevent duplicates
   downloadedImages.add(src);
