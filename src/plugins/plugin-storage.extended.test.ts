@@ -15,13 +15,20 @@ const mockChrome = {
         const result: Record<string, any> = {};
         if (Array.isArray(keys)) {
           keys.forEach(key => {
-            if (mockStorageData[key]) {
-              result[key] = mockStorageData[key];
+            const data = mockStorageData[key];
+            if (data) {
+              // getStorageEntry expects the entry to have timestamp property
+              if (data.timestamp) {
+                result[key] = data;
+              } else {
+                result[key] = data;
+              }
             }
           });
         } else if (typeof keys === 'string') {
-          if (mockStorageData[keys]) {
-            result[keys] = mockStorageData[keys];
+          const data = mockStorageData[keys];
+          if (data) {
+            result[keys] = data;
           }
         } else if (keys === null) {
           // Return all data
