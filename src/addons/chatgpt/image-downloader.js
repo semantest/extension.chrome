@@ -5,7 +5,6 @@ console.log('📥 ChatGPT Image Downloader loaded');
 let imageObserver = null;
 let downloadedImages = new Set(); // Track downloaded images to avoid duplicates
 let monitoringActive = false;
-let checkInterval = null;
 let monitoringStartTime = null; // Track when monitoring started
 let initialImages = new Set(); // Track images that existed before monitoring
 let expectingImage = false; // Flag to indicate we're expecting a new image
@@ -70,24 +69,8 @@ function startImageMonitoring() {
   });
   console.log('👁️ MutationObserver now active');
   
-  // Method 2: Periodic check for images (backup method)
-  // This catches images that might be loaded dynamically without DOM changes
-  let lastMessageCount = document.querySelectorAll('[data-testid="conversation-turn"]').length;
-  
-  checkInterval = setInterval(() => {
-    // Check if we're still expecting an image
-    if (!expectingImage) {
-      return;
-    }
-    
-    // Check all images on the page periodically
-    const images = document.querySelectorAll('img');
-    images.forEach(img => {
-      if (img.src && img.src.includes('oaiusercontent') && !downloadedImages.has(img.src)) {
-        checkForImages(img);
-      }
-    });
-  }, 2000); // Check every 2 seconds
+  // Disable periodic check - rely on MutationObserver and coordinator
+  // The periodic check was causing old images to download
   
   // DON'T check existing images immediately - wait for NEW ones only
   // checkForImages(document.body);
@@ -104,10 +87,6 @@ function stopImageMonitoring() {
   if (imageObserver) {
     imageObserver.disconnect();
     imageObserver = null;
-  }
-  if (checkInterval) {
-    clearInterval(checkInterval);
-    checkInterval = null;
   }
   monitoringActive = false;
   expectingImage = false;
