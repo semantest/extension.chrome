@@ -27,6 +27,7 @@
     "direct-send.js",
     "image-generator.js",
     "image-downloader.js",
+    "queue-manager.js",
     "image-debug.js",
     "context-fix.js",
     "image-fix-aggressive.js",

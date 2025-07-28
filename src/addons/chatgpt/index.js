@@ -21,13 +21,34 @@ async function initializeChatGPTAddon() {
       if (eventType === 'semantest/custom/image/download/requested') {
         console.log('🎨 ChatGPT Addon: Received image download request:', eventPayload);
         
-        // Extract the prompt
+        // Extract the prompt and metadata
         const prompt = eventPayload?.prompt || eventPayload?.message || 'Generate an image';
+        const requestId = eventPayload?.metadata?.requestId || eventPayload?.id;
+        const useQueue = eventPayload?.queue !== false; // Default to using queue
         
-        // Use the image generator for explicit tool activation
-        if (window.chatGPTImageGenerator) {
+        // Check if we should use the queue system
+        if (useQueue && window.imageGenerationQueue) {
+          console.log('📋 Adding request to queue');
+          window.imageGenerationQueue.add({
+            id: requestId,
+            prompt: prompt,
+            metadata: eventPayload.metadata || {}
+          });
+          
+          // Send immediate acknowledgment
+          if (window.semantestBridge) {
+            window.semantestBridge.sendToExtension({
+              type: 'addon:response',
+              success: true,
+              queued: true,
+              requestId: requestId,
+              message: 'Request added to queue'
+            });
+          }
+        } else if (window.chatGPTImageGenerator) {
+          // Direct generation without queue (legacy mode)
           try {
-            console.log('🎨 Using explicit image tool activation...');
+            console.log('🎨 Using direct image generation...');
             const result = await window.chatGPTImageGenerator.generateImage(prompt);
             console.log('✅ ChatGPT Addon: Image generation started successfully');
             
