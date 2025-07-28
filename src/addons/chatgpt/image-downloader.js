@@ -159,6 +159,8 @@ function stopImageMonitoring() {
 }
 
 function checkForImages(element) {
+  console.log('🔎 checkForImages called for:', element.tagName, element.className || 'no-class');
+  
   // Don't check until initial capture is complete
   if (!initialCaptureComplete) {
     console.log('⏸️ Skipping check - initial capture not complete');
@@ -166,8 +168,14 @@ function checkForImages(element) {
   }
   
   // Direct image elements
-  if (element.tagName === 'IMG' && isGeneratedImage(element)) {
-    handleGeneratedImage(element);
+  if (element.tagName === 'IMG') {
+    console.log('📸 Checking IMG element...');
+    if (isGeneratedImage(element)) {
+      console.log('✅ Image passed isGeneratedImage check!');
+      handleGeneratedImage(element);
+    } else {
+      console.log('❌ Image failed isGeneratedImage check');
+    }
   }
   
   // Images inside the element
@@ -289,6 +297,8 @@ function isGeneratedImage(img) {
 
 async function handleGeneratedImage(img) {
   const src = img.src;
+  
+  console.log('🔍 handleGeneratedImage called for:', src.substring(0, 50) + '...');
   
   // Skip if already downloaded
   if (downloadedImages.has(src)) {
