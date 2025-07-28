@@ -2,6 +2,9 @@
  * Unit tests for FileDownload entity
  */
 
+// Mock @typescript-eda/core before importing FileDownload
+jest.mock('@typescript-eda/core', () => require('../../../__mocks__/typescript-eda'));
+
 import { FileDownload } from './file-download';
 import {
   FileDownloadRequested,
