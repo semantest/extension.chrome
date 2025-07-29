@@ -726,7 +726,7 @@ export class AdvancedTrainingManager {
    */
   private async loadScenarios(): Promise<void> {
     try {
-      const result = await chrome.storage.local.get(this.STORAGE_KEY);
+      const result = await chrome.storage.local.get([this.STORAGE_KEY]);
       const stored = result[this.STORAGE_KEY];
       
       if (stored && stored.scenarios) {
