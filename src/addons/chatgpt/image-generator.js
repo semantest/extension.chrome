@@ -291,14 +291,12 @@ async function enterImagePrompt(promptText) {
     console.log('🖱️ Clicking generate button...');
     generateButton.click();
     
-    // Clear any previous downloads and start fresh monitoring
-    console.log('👀 Starting fresh image monitoring for auto-download...');
+    // Start monitoring for the new image
+    console.log('👀 Starting image monitoring for auto-download...');
     if (window.chatGPTImageDownloader) {
-      // Clear cache to avoid downloading old images
-      window.chatGPTImageDownloader.clearDownloadedImages();
       // Stop any existing monitoring
       window.chatGPTImageDownloader.stopImageMonitoring();
-      // Start fresh monitoring
+      // Start fresh monitoring (will automatically ignore existing images)
       window.chatGPTImageDownloader.startImageMonitoring();
     }
     

@@ -18,15 +18,31 @@ function startImageMonitoring() {
     return;
   }
   
-  console.log('👀 Starting image monitoring...');
+  // Starting image monitoring
   monitoringActive = true;
   monitoringStartTime = Date.now();
   expectingImage = true; // We're expecting a new image
   
-  // Clear any previous state
-  downloadedImages.clear();
+  // Clear any previous state but keep existing downloaded images
+  // Don't clear downloadedImages here - it should persist
   initialImages.clear();
   initialCaptureComplete = false;
+  
+  // CRITICAL: Mark all existing DALL-E images as already downloaded
+  // This prevents downloading old images when monitoring starts
+  const existingDalleImages = Array.from(document.querySelectorAll('img'))
+    .filter(img => img.src && (
+      img.src.includes('oaiusercontent') || 
+      img.src.includes('dalle') || 
+      img.src.includes('openai')
+    ));
+  
+  existingDalleImages.forEach(img => {
+    // Marking existing image as already downloaded
+    downloadedImages.add(img.src);
+  });
+  
+  // Found existing DALL-E images to ignore
   
   // Mark as ready immediately - we're looking for NEW images only
   initialMessageCount = document.querySelectorAll('[data-testid="conversation-turn"]').length;
@@ -194,7 +210,7 @@ async function handleGeneratedImage(img) {
     return;
   }
   
-  console.log('🖼️ Downloading image...');
+  // Downloading image...
   
   // Wait for image to fully load if needed
   if (!img.complete) {
@@ -214,7 +230,7 @@ async function handleGeneratedImage(img) {
     const result = await downloadImage(img);
     
     if (result.success) {
-      console.log('✅ Downloaded:', result.filename);
+      console.log('✅ Image downloaded:', result.filename);
       
       // Send response back through the bridge
       if (window.semantestBridge && window.semantestBridge.sendToExtension) {
@@ -378,7 +394,7 @@ function debugCheckAllImages() {
 
 // Force download the last DALL-E image (called by coordinator when generation completes)
 async function forceDownloadLastImage() {
-  console.log('🔧 Downloading completed image...');
+  // Checking for completed image to download
   
   // Temporarily enable automatic detection
   allowAutomaticDetection = true;
@@ -390,19 +406,27 @@ async function forceDownloadLastImage() {
   );
   
   if (dalleImages.length === 0) {
-    console.log('❌ No DALL-E images found');
+    // No DALL-E images found
     allowAutomaticDetection = false;
     return;
   }
   
   // Get the last one (most recent)
   const lastImage = dalleImages[dalleImages.length - 1];
-  console.log('📸 Found completed image:', lastImage.src.substring(0, 80) + '...');
+  
+  // Check if already downloaded
+  if (downloadedImages.has(lastImage.src)) {
+    // Image already downloaded
+    allowAutomaticDetection = false;
+    return;
+  }
+  
+  // Found new completed image
   
   // Download it
   try {
     await handleGeneratedImage(lastImage);
-    console.log('✅ Download triggered!');
+    // Download triggered
   } catch (error) {
     console.error('❌ Download failed:', error);
   } finally {
@@ -418,8 +442,9 @@ window.chatGPTImageDownloader = {
   downloadImage,
   checkForImages,
   clearDownloadedImages: () => {
-    downloadedImages.clear();
-    // Cleared downloaded images cache
+    // Don't actually clear - this was causing issues
+    // downloadedImages.clear();
+    // Keeping existing image tracking to prevent duplicates
   },
   debugCheckAllImages,
   forceDownloadLastImage, // NEW: Force download for testing
@@ -427,7 +452,7 @@ window.chatGPTImageDownloader = {
   get pendingFilename() { return pendingFilename; },
   set pendingFilename(value) { 
     pendingFilename = value;
-    console.log(`📝 Custom filename set: ${value}`);
+    // Custom filename set
   },
   isGeneratedImage, // Export for debugging
   handleGeneratedImage // Export for debugging

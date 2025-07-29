@@ -3,23 +3,23 @@
  * Initializes ChatGPT-specific functionality when loaded
  */
 
-console.log('🚀 ChatGPT Addon initializing...');
+// ChatGPT Addon initializing
 
 // Initialize addon
 async function initializeChatGPTAddon() {
-  console.log('📦 ChatGPT Addon: Setting up event listeners...');
+  // Setting up event listeners
   
   // Listen for messages from extension via custom event
   window.addEventListener('semantest-message', async (event) => {
     const message = event.detail;
-    console.log('📨 ChatGPT Addon received message:', message);
+    // Received WebSocket message
     
     if (message.type === 'websocket:message' && message.payload) {
       const eventType = message.payload.type;
       const eventPayload = message.payload.payload;
       
       if (eventType === 'semantest/custom/image/download/requested') {
-        console.log('🎨 ChatGPT Addon: Received image download request:', eventPayload);
+        // Received image download request
         
         // Extract the prompt and metadata
         const prompt = eventPayload?.prompt || eventPayload?.message || 'Generate an image';
@@ -28,7 +28,7 @@ async function initializeChatGPTAddon() {
         
         // Check if we should use the queue system
         if (useQueue && window.imageGenerationQueue) {
-          console.log('📋 Adding request to queue');
+          // Adding request to queue
           window.imageGenerationQueue.add({
             id: requestId,
             prompt: prompt,
@@ -48,9 +48,16 @@ async function initializeChatGPTAddon() {
         } else if (window.chatGPTImageGenerator) {
           // Direct generation without queue (legacy mode)
           try {
-            console.log('🎨 Using direct image generation...');
+            // Using direct image generation
+            
+            // Set custom filename if provided
+            if (eventPayload?.metadata?.filename && window.chatGPTImageDownloader) {
+              console.log('📝 Setting custom filename:', eventPayload.metadata.filename);
+              window.chatGPTImageDownloader.pendingFilename = eventPayload.metadata.filename;
+            }
+            
             const result = await window.chatGPTImageGenerator.generateImage(prompt);
-            console.log('✅ ChatGPT Addon: Image generation started successfully');
+            // Image generation started successfully
             
             // Send response back via bridge
             if (window.semantestBridge) {
@@ -82,7 +89,7 @@ async function initializeChatGPTAddon() {
   // Monitor ChatGPT state changes
   if (window.chatGPTStateDetector) {
     window.chatGPTStateDetector.stateChangeCallbacks.push((state) => {
-      console.log('📊 ChatGPT state changed:', state);
+      // ChatGPT state changed
       
       // Log important state changes
       if (state.isImageGenerating) {
@@ -94,7 +101,7 @@ async function initializeChatGPTAddon() {
     });
   }
   
-  console.log('✅ ChatGPT Addon: Initialization complete');
+  // ChatGPT Addon initialization complete
   
   // Notify that addon is ready via bridge
   if (window.semantestBridge) {
@@ -112,34 +119,40 @@ async function initializeChatGPTAddon() {
 
 // Initialize coordinator inline since script loading isn't working
 const initializeImageCoordinator = () => {
-  console.log('🎯 Initializing image download coordinator...');
+  // Initializing image download coordinator
   
   if (!window.chatGPTStateDetector) {
-    console.log('⏳ State detector not ready for coordinator, retrying...');
+    // State detector not ready, retrying...
     setTimeout(initializeImageCoordinator, 500);
     return;
   }
   
-  console.log('✅ Setting up image download coordinator');
+  // Setting up image download coordinator
   
   let previousState = null;
   
+  let lastDownloadTime = 0;
+  
   window.chatGPTStateDetector.stateChangeCallbacks.push((newState) => {
-    console.log('🎯 Coordinator: State changed', { 
-      previousState: previousState,
-      wasGenerating: previousState?.isImageGenerating, 
-      isGenerating: newState.isImageGenerating,
-      isIdle: newState.isIdle 
-    });
+    // Coordinator: State changed
     
     // If we just finished generating an image (was generating, now not)
     if (previousState?.isImageGenerating && !newState.isImageGenerating) {
-      console.log('✅ Image generation completed! Triggering download...');
+      // Image generation completed, checking if download needed
+      
+      // Prevent duplicate downloads within 5 seconds
+      const now = Date.now();
+      if (now - lastDownloadTime < 5000) {
+        // Skipping download - already downloaded recently
+        previousState = newState;
+        return;
+      }
       
       setTimeout(() => {
         if (window.chatGPTImageDownloader?.forceDownloadLastImage) {
-          console.log('🎯 Coordinator: Force downloading last image');
+          // Coordinator: Force downloading last image
           window.chatGPTImageDownloader.forceDownloadLastImage();
+          lastDownloadTime = Date.now();
         }
       }, 1000);
     }
@@ -152,19 +165,23 @@ const initializeImageCoordinator = () => {
       );
       
       if (dalleImages.length > 0) {
-        console.log('🔍 Found DALL-E images in idle state, checking if they need download...');
-        setTimeout(() => {
-          if (window.chatGPTImageDownloader?.forceDownloadLastImage) {
-            window.chatGPTImageDownloader.forceDownloadLastImage();
-          }
-        }, 1000);
+        // Only check if we recently finished generating (within last 10 seconds)
+        const timeSinceLastDownload = Date.now() - lastDownloadTime;
+        if (timeSinceLastDownload < 10000) {
+          // Found DALL-E images in idle state, checking if they need download
+          setTimeout(() => {
+            if (window.chatGPTImageDownloader?.forceDownloadLastImage) {
+              window.chatGPTImageDownloader.forceDownloadLastImage();
+            }
+          }, 1000);
+        }
       }
     }
     
     previousState = newState;
   });
   
-  console.log('✅ Image download coordinator ready');
+  // Image download coordinator ready
 };
 
 // Initialize when DOM is ready
