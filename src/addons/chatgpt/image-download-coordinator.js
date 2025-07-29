@@ -14,9 +14,14 @@ if (window.chatGPTStateDetector) {
       isIdle: newState.isIdle 
     });
     
-    // If we just finished generating an image (was generating, now idle)
-    if (previousState?.isImageGenerating && !newState.isImageGenerating && newState.isIdle) {
+    // If we just finished generating an image (was generating, now not)
+    if (previousState?.isImageGenerating && !newState.isImageGenerating) {
       console.log('✅ Image generation completed! Triggering download...');
+      console.log('State details:', {
+        isIdle: newState.isIdle,
+        isResponding: newState.isResponding,
+        canSendMessage: newState.canSendMessage
+      });
       
       // Give it a moment for the DOM to update
       setTimeout(() => {
