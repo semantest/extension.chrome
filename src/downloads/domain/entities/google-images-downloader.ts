@@ -364,17 +364,19 @@ export class GoogleImagesDownloader extends Entity<GoogleImagesDownloader> {
     /**
      * Extracts element context for pattern learning
      */
-    private extractElementContext(element: any): object {
+    private extractElementContext(element: any): {
+        tagName: string;
+        className?: string;
+        id?: string;
+        textContent?: string;
+        href?: string;
+    } {
         return {
             tagName: element.tagName?.toLowerCase() || 'img',
             className: element.className || '',
             id: element.id || '',
             textContent: element.alt || element.title || '',
-            href: element.src || '',
-            dimensions: {
-                width: element.naturalWidth || element.width || 0,
-                height: element.naturalHeight || element.height || 0
-            }
+            href: element.src || ''
         };
     }
 
