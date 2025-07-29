@@ -110,11 +110,72 @@ async function initializeChatGPTAddon() {
   }
 }
 
+// Initialize coordinator inline since script loading isn't working
+const initializeImageCoordinator = () => {
+  console.log('🎯 Initializing image download coordinator...');
+  
+  if (!window.chatGPTStateDetector) {
+    console.log('⏳ State detector not ready for coordinator, retrying...');
+    setTimeout(initializeImageCoordinator, 500);
+    return;
+  }
+  
+  console.log('✅ Setting up image download coordinator');
+  
+  let previousState = null;
+  
+  window.chatGPTStateDetector.stateChangeCallbacks.push((newState) => {
+    console.log('🎯 Coordinator: State changed', { 
+      previousState: previousState,
+      wasGenerating: previousState?.isImageGenerating, 
+      isGenerating: newState.isImageGenerating,
+      isIdle: newState.isIdle 
+    });
+    
+    // If we just finished generating an image (was generating, now not)
+    if (previousState?.isImageGenerating && !newState.isImageGenerating) {
+      console.log('✅ Image generation completed! Triggering download...');
+      
+      setTimeout(() => {
+        if (window.chatGPTImageDownloader?.forceDownloadLastImage) {
+          console.log('🎯 Coordinator: Force downloading last image');
+          window.chatGPTImageDownloader.forceDownloadLastImage();
+        }
+      }, 1000);
+    }
+    
+    // Alternative: If we see idle state with DALL-E images, download them
+    if (!previousState?.isImageGenerating && newState.isIdle) {
+      const allImages = Array.from(document.querySelectorAll('img'));
+      const dalleImages = allImages.filter(img => 
+        img.src && (img.src.includes('oaiusercontent') || img.src.includes('dalle'))
+      );
+      
+      if (dalleImages.length > 0) {
+        console.log('🔍 Found DALL-E images in idle state, checking if they need download...');
+        setTimeout(() => {
+          if (window.chatGPTImageDownloader?.forceDownloadLastImage) {
+            window.chatGPTImageDownloader.forceDownloadLastImage();
+          }
+        }, 1000);
+      }
+    }
+    
+    previousState = newState;
+  });
+  
+  console.log('✅ Image download coordinator ready');
+};
+
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeChatGPTAddon);
+  document.addEventListener('DOMContentLoaded', () => {
+    initializeChatGPTAddon();
+    initializeImageCoordinator();
+  });
 } else {
   initializeChatGPTAddon();
+  initializeImageCoordinator();
 }
 
 // Export for debugging
