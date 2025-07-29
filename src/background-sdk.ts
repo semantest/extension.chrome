@@ -262,7 +262,7 @@ function updateConnectionStatus(): void {
 }
 
 // Message handler for extension communication
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
   console.log('Message received:', message.type, 'from:', sender.tab?.id || 'extension');
 
   switch (message.type) {

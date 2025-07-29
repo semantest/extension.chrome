@@ -587,7 +587,7 @@ const messageDispatcher = new MessageDispatcher();
 extensionId = chrome.runtime.id;
 
 // Listen for messages from popup and content scripts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
   console.log('📨 Received message:', message);
   
   // Handle popup commands

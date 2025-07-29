@@ -27,7 +27,7 @@ const currentUrl = window.location.href;
   }
 })();
 
-chrome.runtime.onMessage.addListener(async (message: any, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
   console.log('📨 Content script received message:', message);
   
   // Store for E2E testing

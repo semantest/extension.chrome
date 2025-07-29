@@ -12,5 +12,15 @@ declare module '@typescript-eda/core' {
     constructor() {}
   }
 
+  export abstract class Event {
+    public readonly timestamp: Date;
+    
+    constructor();
+  }
+
+  export abstract class Adapter {
+    protected emit(event: Event): void;
+  }
+
   export function listen(event: any): any;
 }

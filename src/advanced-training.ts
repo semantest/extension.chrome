@@ -165,6 +165,14 @@ export interface DataFlowDefinition {
   validations: DataValidation[];
 }
 
+export interface DataOutputDefinition {
+  field: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  description: string;
+  required: boolean;
+  defaultValue?: any;
+}
+
 export interface DataTransformation {
   field: string;
   operation: 'format' | 'calculate' | 'lookup' | 'aggregate' | 'filter';
