@@ -9,6 +9,7 @@ if (window.chatGPTStateDetector) {
   
   window.chatGPTStateDetector.stateChangeCallbacks.push((newState) => {
     console.log('🎯 Coordinator: State changed', { 
+      previousState: previousState,
       wasGenerating: previousState?.isImageGenerating, 
       isGenerating: newState.isImageGenerating,
       isIdle: newState.isIdle 
@@ -43,6 +44,25 @@ if (window.chatGPTStateDetector) {
           });
         }
       }, 1000); // Give more time for image to fully load
+    }
+    
+    // Alternative: If we see idle state with recent DALL-E images, download them
+    if (!previousState?.isImageGenerating && newState.isIdle) {
+      // Check if there are any DALL-E images that haven't been downloaded
+      const allImages = Array.from(document.querySelectorAll('img'));
+      const dalleImages = allImages.filter(img => 
+        img.src && (img.src.includes('oaiusercontent') || img.src.includes('dalle'))
+      );
+      
+      if (dalleImages.length > 0) {
+        console.log('🔍 Found DALL-E images in idle state, checking if they need download...');
+        // Give it a moment then download
+        setTimeout(() => {
+          if (window.chatGPTImageDownloader?.forceDownloadLastImage) {
+            window.chatGPTImageDownloader.forceDownloadLastImage();
+          }
+        }, 1000);
+      }
     }
     
     // Update previous state for next comparison
