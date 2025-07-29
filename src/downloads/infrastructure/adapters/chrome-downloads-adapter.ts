@@ -109,10 +109,10 @@ export class ChromeDownloadsAdapter extends Adapter {
     ): chrome.downloads.DownloadItem {
         return {
             ...download,
-            state: delta.state?.current || download.state,
+            state: (delta.state?.current || download.state) as chrome.downloads.State,
             paused: delta.paused?.current ?? download.paused,
-            error: delta.error?.current || download.error,
-            bytesReceived: delta.bytesReceived?.current ?? download.bytesReceived,
+            error: (delta.error?.current || download.error) as chrome.downloads.InterruptReason | undefined,
+            bytesReceived: (delta as any).bytesReceived?.current ?? download.bytesReceived,
             totalBytes: delta.totalBytes?.current ?? download.totalBytes,
             filename: delta.filename?.current || download.filename,
             exists: delta.exists?.current ?? download.exists

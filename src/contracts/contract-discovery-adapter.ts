@@ -630,7 +630,7 @@ export class ContractDiscoveryAdapter {
     window.addEventListener('message', (event) => {
       if (event.data.type === 'web-buddy:request-contracts') {
         const contracts = this.getDiscoveredContracts();
-        event.source?.postMessage({
+        (event.source as Window)?.postMessage({
           type: 'web-buddy:contracts-response',
           contracts,
           correlationId: event.data.correlationId

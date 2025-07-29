@@ -2,6 +2,7 @@
 declare module 'typescript-eda' {
   export class Entity<T> {
     constructor() {}
+    protected emit(event: Event): void;
   }
 
   export function listen(event: any): any;
@@ -10,6 +11,7 @@ declare module 'typescript-eda' {
 declare module '@typescript-eda/core' {
   export class Entity<T> {
     constructor() {}
+    protected emit(event: Event): void;
   }
 
   export abstract class Event {
@@ -18,7 +20,7 @@ declare module '@typescript-eda/core' {
     constructor();
   }
 
-  export abstract class Adapter {
+  export class Adapter {
     protected emit(event: Event): void;
   }
 
