@@ -1,10 +1,21 @@
 // Coordinates image download with generation state
-console.log('🎯 Image Download Coordinator loaded');
+console.log('🎯 Image Download Coordinator loading...');
 
 let pendingImageDownload = null;
 
-// Listen for state changes
-if (window.chatGPTStateDetector) {
+// Function to initialize coordinator
+function initializeCoordinator() {
+  console.log('🎯 Initializing coordinator...');
+  
+  if (!window.chatGPTStateDetector) {
+    console.log('⏳ State detector not ready, waiting...');
+    setTimeout(initializeCoordinator, 500);
+    return;
+  }
+  
+  console.log('✅ State detector found, setting up coordinator');
+
+  // Listen for state changes
   let previousState = null;
   
   window.chatGPTStateDetector.stateChangeCallbacks.push((newState) => {
@@ -70,8 +81,9 @@ if (window.chatGPTStateDetector) {
   });
   
   console.log('✅ Coordinator registered with state detector');
-} else {
-  console.error('❌ State detector not available!');
 }
+
+// Start initialization
+initializeCoordinator();
 
 console.log('🎯 Coordinator ready - will download images after generation completes');
