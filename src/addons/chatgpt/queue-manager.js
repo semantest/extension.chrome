@@ -15,7 +15,8 @@ class ImageGenerationQueue {
       ...request,
       id: request.id || `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       status: 'queued',
-      queuedAt: Date.now()
+      queuedAt: Date.now(),
+      filename: request.metadata?.filename || request.filename || null
     });
     
     // Send queue status update
@@ -63,6 +64,11 @@ class ImageGenerationQueue {
     this.sendRequestStatus(request, 'processing');
     
     try {
+      // Set custom filename if provided
+      if (request.filename && window.chatGPTImageDownloader) {
+        window.chatGPTImageDownloader.pendingFilename = request.filename;
+      }
+      
       // Generate the image
       const result = await window.chatGPTImageGenerator.generateImage(request.prompt);
       

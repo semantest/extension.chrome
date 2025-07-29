@@ -10,6 +10,7 @@ let initialImages = new Set(); // Track images that existed before monitoring
 let expectingImage = false; // Flag to indicate we're expecting a new image
 let initialCaptureComplete = false; // Flag to ensure initial capture is done
 let initialMessageCount = 0; // Track message count when monitoring started
+let pendingFilename = null; // Store custom filename from event payload
 
 function startImageMonitoring() {
   if (monitoringActive) {
@@ -260,9 +261,16 @@ async function downloadImage(img) {
   try {
     const src = img.src;
     
-    // Generate filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    const filename = `chatgpt-image-${timestamp}.png`;
+    // Use custom filename if provided, otherwise generate with timestamp
+    let filename;
+    if (pendingFilename) {
+      filename = pendingFilename;
+      // Clear the pending filename after use
+      pendingFilename = null;
+    } else {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      filename = `chatgpt-image-${timestamp}.png`;
+    }
     
     // For blob URLs, we need to fetch the blob
     if (src.startsWith('blob:')) {
@@ -415,6 +423,12 @@ window.chatGPTImageDownloader = {
   },
   debugCheckAllImages,
   forceDownloadLastImage, // NEW: Force download for testing
+  // Expose pendingFilename for external setting
+  get pendingFilename() { return pendingFilename; },
+  set pendingFilename(value) { 
+    pendingFilename = value;
+    console.log(`📝 Custom filename set: ${value}`);
+  },
   isGeneratedImage, // Export for debugging
   handleGeneratedImage // Export for debugging
 };
