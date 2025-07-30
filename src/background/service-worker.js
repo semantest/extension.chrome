@@ -5,6 +5,9 @@
 
 console.log('🚀 Semantest Service Worker starting...');
 
+// Import dynamic addon manager
+importScripts('../core/addon-manager-dynamic.js');
+
 // Global state
 const extensionState = {
   isActive: true,
