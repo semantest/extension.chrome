@@ -11,7 +11,7 @@ class DynamicAddonManager {
     this.activeAddons = new Map(); // tabId -> addonId
     this.addonChannels = new Map(); // tabId -> MessageBus
     this.remoteAddons = new Map(); // Cache of remote addons
-    this.serverUrl = 'http://localhost:3004'; // REST server URL
+    this.serverUrl = 'http://localhost:3003'; // REST server URL
   }
 
   /**
@@ -335,9 +335,8 @@ class DynamicAddonManager {
       if (sender.tab && sender.tab.id === tabId) {
         // Forward addon messages to message bus
         if (message.type && message.type.startsWith('addon:')) {
-          if (window.messageBus) {
-            window.messageBus.emit(message.type, message.payload);
-          }
+          // In service worker context, we'll handle this differently
+          console.log(`📡 Addon message received: ${message.type}`, message.payload);
         }
       }
     });
@@ -400,6 +399,10 @@ const dynamicAddonManager = new DynamicAddonManager();
 // Export for use in extension
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = dynamicAddonManager;
-} else {
+} else if (typeof self !== 'undefined') {
+  // Service worker context
+  self.dynamicAddonManager = dynamicAddonManager;
+} else if (typeof window !== 'undefined') {
+  // Browser context
   window.dynamicAddonManager = dynamicAddonManager;
 }

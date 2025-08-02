@@ -4,7 +4,7 @@
   "version": "1.0.2",
   "description": "AI-powered web automation extension built on Semantest framework for ChatGPT and language model integration",
   "background": {
-    "service_worker": "src/background/service-worker.js"
+    "service_worker": "src/background/service-worker-dynamic-v2.js"
   },
   "content_scripts": [],
   "web_accessible_resources": [

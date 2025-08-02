@@ -1,23 +1,20 @@
 /**
- * Semantest Extension Service Worker - Dynamic Addon Loading
- * Phase 1: Load addons from REST server
+ * Semantest Extension Service Worker - Fixed Dynamic Loading
+ * Simplified version with proper error handling
  */
 
-console.log('🚀 Semantest Service Worker (Dynamic) starting...');
-
-// Import dynamic addon manager
-importScripts('../core/addon-manager-dynamic.js');
-// Note: message-bus.js uses window object, can't be imported in service worker
+console.log('🚀 Semantest Service Worker (Fixed) starting...');
 
 // Global state
 const extensionState = {
   isActive: true,
   errors: [],
   wsConnected: false,
-  messages: []
+  messages: [],
+  injectedTabs: new Set() // Track tabs where we've injected scripts
 };
 
-// Simple message storage (in-memory for service worker)
+// Simple message storage
 const messageLogger = {
   messages: [],
   maxMessages: 100,
@@ -36,15 +33,6 @@ const messageLogger = {
     if (this.messages.length > this.maxMessages) {
       this.messages = this.messages.slice(-this.maxMessages);
     }
-    
-    // Notify popup if connected
-    chrome.runtime.sendMessage({
-      type: 'message-update',
-      event: 'message-added',
-      data: entry
-    }).catch(() => {
-      // Ignore if no listeners
-    });
     
     return entry;
   },
@@ -65,21 +53,13 @@ const messageLogger = {
   
   clear() {
     this.messages = [];
-    chrome.runtime.sendMessage({
-      type: 'message-update',
-      event: 'messages-cleared'
-    }).catch(() => {});
   },
   
   getStats() {
     return {
       total: this.messages.length,
       incoming: this.messages.filter(m => m.direction === 'incoming').length,
-      outgoing: this.messages.filter(m => m.direction === 'outgoing').length,
-      byType: this.messages.reduce((acc, msg) => {
-        acc[msg.type] = (acc[msg.type] || 0) + 1;
-        return acc;
-      }, {})
+      outgoing: this.messages.filter(m => m.direction === 'outgoing').length
     };
   }
 };
@@ -161,14 +141,18 @@ class WebSocketHandler {
       return;
     }
     
-    // Forward to active tab's addon
-    await dynamicAddonManager.sendToAddon(tab.id, {
-      type: 'websocket:message',
-      payload: {
-        type: 'semantest/custom/image/download/requested',
-        payload: payload
-      }
-    });
+    // Send message to tab
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        type: 'websocket:message',
+        payload: {
+          type: 'semantest/custom/image/download/requested',
+          payload: payload
+        }
+      });
+    } catch (error) {
+      console.error('Failed to send message to tab:', error);
+    }
   }
 
   send(data) {
@@ -209,35 +193,139 @@ class WebSocketHandler {
 // Create WebSocket handler instance
 const wsHandler = new WebSocketHandler();
 
-// Installation handler
-chrome.runtime.onInstalled.addListener(async (details) => {
-  console.log('Extension installed:', details.reason);
-  
-  // Initialize dynamic addon manager
+// Dynamic addon loading
+async function loadAddonDynamically(tabId, url) {
   try {
-    await dynamicAddonManager.initialize();
-    console.log('✅ Dynamic addon manager initialized');
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    
+    // Check if this is a ChatGPT domain
+    if (!hostname.includes('chat.openai.com') && !hostname.includes('chatgpt.com')) {
+      return;
+    }
+    
+    // Check if we've already injected into this tab
+    if (extensionState.injectedTabs.has(tabId)) {
+      console.log(`✅ Addon already injected into tab ${tabId}`);
+      return;
+    }
+    
+    console.log(`💉 Loading addon dynamically for tab ${tabId}`);
+    
+    // First, try to load from REST server
+    try {
+      const manifestResponse = await fetch('http://localhost:3003/api/addons/chatgpt/manifest');
+      if (!manifestResponse.ok) {
+        throw new Error(`Failed to fetch manifest: ${manifestResponse.status}`);
+      }
+      
+      const manifest = await manifestResponse.json();
+      console.log(`📋 Loaded manifest for ${manifest.addon_id}`);
+      
+      // Fetch the bundle
+      const bundleResponse = await fetch('http://localhost:3003/api/addons/chatgpt/bundle');
+      if (!bundleResponse.ok) {
+        throw new Error(`Failed to fetch bundle: ${bundleResponse.status}`);
+      }
+      
+      const bundle = await bundleResponse.text();
+      console.log(`📦 Loaded bundle (${bundle.length} bytes)`);
+      
+      // Inject bridge first (ISOLATED world for chrome.runtime access)
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['src/content/chatgpt-bridge.js'],
+        world: 'ISOLATED'
+      });
+      
+      // Wait a bit for bridge to initialize
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Inject the bundled addon code
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        func: (bundleCode) => {
+          // Check if already injected
+          if (window.chatGPTAddonInjected) {
+            console.log('✅ ChatGPT addon already injected');
+            return;
+          }
+          
+          // Mark as injected
+          window.chatGPTAddonInjected = true;
+          
+          // Create script element
+          const script = document.createElement('script');
+          script.textContent = bundleCode;
+          script.id = 'chatgpt-addon-bundle';
+          document.head.appendChild(script);
+          script.remove();
+          
+          console.log('✅ ChatGPT addon injected dynamically');
+        },
+        args: [bundle],
+        world: 'MAIN'
+      });
+      
+      // Mark tab as injected
+      extensionState.injectedTabs.add(tabId);
+      console.log(`✅ Addon loaded successfully for tab ${tabId}`);
+      
+    } catch (error) {
+      console.error('Failed to load addon dynamically:', error);
+      console.log('📦 Falling back to local addon loading...');
+      
+      // Fallback to local addon injection
+      await injectLocalAddon(tabId);
+    }
+    
   } catch (error) {
-    console.error('Failed to initialize addon manager:', error);
+    console.error('Error in loadAddonDynamically:', error);
   }
-  
-  // Start WebSocket connection
-  wsHandler.connect();
+}
+
+// Fallback local addon injection
+async function injectLocalAddon(tabId) {
+  try {
+    // Inject bridge
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['src/content/chatgpt-bridge.js']
+    });
+    
+    // Inject addon files
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: [
+        'src/addons/chatgpt/state-detector.js',
+        'src/addons/chatgpt/controller.js',
+        'src/addons/chatgpt/button-clicker.js',
+        'src/addons/chatgpt/direct-send.js',
+        'src/addons/chatgpt/image-generator.js',
+        'src/addons/chatgpt/image-downloader.js',
+        'src/addons/chatgpt/queue-manager.js',
+        'src/addons/chatgpt/index.js'
+      ],
+      world: 'MAIN'
+    });
+    
+    extensionState.injectedTabs.add(tabId);
+    console.log('✅ Local addon injected as fallback');
+  } catch (error) {
+    console.error('Failed to inject local addon:', error);
+  }
+}
+
+// Tab update listener
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url) {
+    await loadAddonDynamically(tabId, tab.url);
+  }
 });
 
-// Startup handler
-chrome.runtime.onStartup.addListener(async () => {
-  console.log('Extension started');
-  
-  // Initialize dynamic addon manager
-  try {
-    await dynamicAddonManager.initialize();
-    console.log('✅ Dynamic addon manager initialized on startup');
-  } catch (error) {
-    console.error('Failed to initialize addon manager:', error);
-  }
-  
-  wsHandler.connect();
+// Tab removal listener
+chrome.tabs.onRemoved.addListener((tabId) => {
+  extensionState.injectedTabs.delete(tabId);
 });
 
 // Message handlers
@@ -287,18 +375,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           response = { success: true };
           break;
           
-        case 'REFRESH_ADDONS':
-          const addons = await dynamicAddonManager.refreshRemoteAddons();
-          response = { success: true, addons };
-          break;
-          
-        case 'GET_ADDONS':
-          response = {
-            success: true,
-            addons: dynamicAddonManager.getAllAddons()
-          };
-          break;
-          
         case 'addon:response':
           // Forward addon responses to WebSocket
           wsHandler.send({
@@ -322,7 +398,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true; // Keep message channel open for async response
 });
 
-// Context menu handler
+// Installation handler
+chrome.runtime.onInstalled.addListener(async (details) => {
+  console.log('Extension installed:', details.reason);
+  
+  // Check existing tabs
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (tab.url && (tab.url.includes('chat.openai.com') || tab.url.includes('chatgpt.com'))) {
+      await loadAddonDynamically(tab.id, tab.url);
+    }
+  }
+  
+  // Start WebSocket connection
+  wsHandler.connect();
+});
+
+// Startup handler
+chrome.runtime.onStartup.addListener(() => {
+  console.log('Extension started');
+  wsHandler.connect();
+});
+
+// Context menu
 chrome.contextMenus.create({
   id: 'semantest-send-to-chatgpt',
   title: 'Send to ChatGPT',
@@ -331,8 +429,7 @@ chrome.contextMenus.create({
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'semantest-send-to-chatgpt' && info.selectionText) {
-    // Forward to active addon
-    dynamicAddonManager.sendToAddon(tab.id, {
+    chrome.tabs.sendMessage(tab.id, {
       type: 'context-menu:send-text',
       text: info.selectionText
     });
@@ -345,17 +442,7 @@ self.addEventListener('activate', event => {
   event.waitUntil(clients.claim());
 });
 
-// Initialize on first load
-(async () => {
-  try {
-    await dynamicAddonManager.initialize();
-    console.log('✅ Dynamic addon manager initialized on load');
-  } catch (error) {
-    console.error('Failed to initialize addon manager:', error);
-  }
-  
-  // Start WebSocket connection
-  wsHandler.connect();
-})();
+// Start WebSocket connection
+wsHandler.connect();
 
-console.log('✅ Semantest Service Worker (Dynamic) ready');
+console.log('✅ Semantest Service Worker (Fixed) ready');

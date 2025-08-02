@@ -60,7 +60,9 @@ async function enterImagePrompt(promptText) {
     
     if (!imageInput) {
       console.log('⚠️ No specific image input found, using main prompt area');
-      imageInput = document.querySelector('#prompt-textarea') ||
+      imageInput = document.querySelector('textarea#prompt-textarea') ||
+                  document.querySelector('textarea[data-id="root"]') ||
+                  document.querySelector('textarea') ||
                   document.querySelector('[contenteditable="true"]');
     }
     
@@ -120,61 +122,29 @@ async function enterImagePrompt(promptText) {
     
     let generateButton = null;
     
-    // Look for button near the input first (but skip upload, tool, and MICROPHONE buttons)
+    // Look for button near the input first
     const inputContainer = imageInput.closest('form') || imageInput.parentElement?.parentElement;
     if (inputContainer) {
       const nearbyButtons = inputContainer.querySelectorAll('button:not([disabled])');
-      let micButton = null;
       
-      for (const btn of nearbyButtons) {
+      // Find the send button (usually the last button in the form with an SVG icon)
+      for (let i = nearbyButtons.length - 1; i >= 0; i--) {
+        const btn = nearbyButtons[i];
+        
+        // Skip buttons with specific roles we don't want
         const ariaLabel = btn.getAttribute('aria-label')?.toLowerCase() || '';
-        const title = btn.getAttribute('title')?.toLowerCase() || '';
-        const btnId = btn.id?.toLowerCase() || '';
-        
-        // CRITICAL: Detect microphone button
-        const hasMicIcon = btn.querySelector('svg path[d*="M12 2"]') || // Common mic path
-                          btn.querySelector('svg path[d*="microphone"]') ||
-                          ariaLabel.includes('microphone') ||
-                          ariaLabel.includes('voice') ||
-                          ariaLabel.includes('dictate') || // NEW: ChatGPT calls it "Dictate button"
-                          title.includes('microphone') ||
-                          title.includes('dictate');
-        
-        if (hasMicIcon) {
-          console.log('🎤 DETECTED MICROPHONE BUTTON - SKIP!', {
-            id: btn.id,
-            ariaLabel: ariaLabel,
-            title: title
-          });
-          micButton = btn;
+        if (ariaLabel.includes('attach') || 
+            ariaLabel.includes('upload') || 
+            ariaLabel.includes('microphone') ||
+            ariaLabel.includes('voice') ||
+            ariaLabel.includes('dictate')) {
           continue;
         }
         
-        // Skip unwanted buttons
-        if (btn.id === 'upload-file-btn' || 
-            btn.id === 'system-hint-button' ||
-            ariaLabel.includes('file') ||
-            ariaLabel.includes('upload') ||
-            ariaLabel.includes('attach') ||
-            ariaLabel.includes('choose tool') ||
-            btnId.includes('hint')) {
-          console.log('🚫 Skipping button:', btn.id, ariaLabel);
-          continue;
-        }
-        
-        // Look for send/submit button specifically
-        if (!btn.disabled && btn.offsetParent && 
-            (btn.type === 'submit' || 
-             ariaLabel.includes('send') ||
-             btn.querySelector('svg'))) {
+        // Check if it has an SVG (send icon)
+        if (btn.querySelector('svg')) {
           generateButton = btn;
-          console.log('✅ Found send button near input:', {
-            id: btn.id,
-            type: btn.type,
-            ariaLabel: btn.getAttribute('aria-label'),
-            hasSvg: btn.querySelector('svg') !== null,
-            notMicrophone: btn !== micButton
-          });
+          console.log('✅ Found send button with icon');
           break;
         }
       }

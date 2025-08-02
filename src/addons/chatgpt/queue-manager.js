@@ -28,12 +28,18 @@ class ImageGenerationQueue {
 
   // Check if we can process the next request
   canProcess() {
-    // Check if send button is enabled (ChatGPT is ready)
-    const sendButton = document.querySelector('button[data-testid="send-button"]') ||
-                      document.querySelector('button[aria-label="Send message"]') ||
-                      document.querySelector('#prompt-textarea')?.parentElement?.querySelector('button[type="submit"]');
+    // Check if we can type in the textarea (ChatGPT is ready)
+    const textarea = document.querySelector('textarea#prompt-textarea') || 
+                     document.querySelector('textarea[data-id="root"]') ||
+                     document.querySelector('textarea');
     
-    return sendButton && !sendButton.disabled;
+    // ChatGPT is ready if textarea exists and is not disabled
+    const canType = textarea && !textarea.disabled && !textarea.readOnly;
+    
+    // Also check that we're not in the middle of a response
+    const isResponding = document.querySelector('[data-testid="stop-button"]') !== null;
+    
+    return canType && !isResponding;
   }
 
   // Process the next request in queue

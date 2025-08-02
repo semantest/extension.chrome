@@ -213,6 +213,13 @@ class PopupInterface {
     div.textContent = text;
     return div.innerHTML;
   }
+
+  updateAddonInfo(addonName) {
+    const addonNameElement = document.getElementById('addon-name');
+    if (addonNameElement) {
+      addonNameElement.textContent = addonName || 'None';
+    }
+  }
 }
 
 // Initialize popup when DOM is ready

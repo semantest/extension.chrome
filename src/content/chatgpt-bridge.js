@@ -9,13 +9,25 @@ console.log('🌉 ChatGPT Bridge loaded');
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('🌉 Bridge received from service worker:', request);
   
-  // Forward to MAIN world via custom event
-  window.dispatchEvent(new CustomEvent('semantest-message', {
-    detail: request
-  }));
+  // Handle ping messages for testing
+  if (request.type === 'ping') {
+    sendResponse({ success: true, message: 'pong', bridge: 'active' });
+    return true;
+  }
+  
+  // Forward to MAIN world via DOM element
+  // Custom events don't cross the ISOLATED/MAIN boundary, so we use a different approach
+  const messageElement = document.createElement('div');
+  messageElement.id = 'semantest-message-' + Date.now();
+  messageElement.style.display = 'none';
+  messageElement.textContent = JSON.stringify(request);
+  document.body.appendChild(messageElement);
+  
+  // Trigger event in MAIN world by modifying the element
+  messageElement.setAttribute('data-message-ready', 'true');
   
   // Send response back
-  sendResponse({ received: true });
+  sendResponse({ received: true, bridge: 'active' });
   return true;
 });
 
@@ -44,10 +56,13 @@ window.addEventListener('semantest-response', (event) => {
 });
 
 // Create a separate script file for the bridge helper
-const script = document.createElement('script');
-script.src = chrome.runtime.getURL('src/content/bridge-helper.js');
-script.onload = () => {
-  console.log('🌉 Bridge helper script loaded');
-  script.remove();
-};
-document.head.appendChild(script);
+// Check if already injected
+if (!document.getElementById('semantest-bridge-helper')) {
+  const bridgeScript = document.createElement('script');
+  bridgeScript.id = 'semantest-bridge-helper';
+  bridgeScript.src = chrome.runtime.getURL('src/content/bridge-helper.js');
+  bridgeScript.onload = () => {
+    console.log('🌉 Bridge helper script loaded');
+  };
+  document.head.appendChild(bridgeScript);
+}
