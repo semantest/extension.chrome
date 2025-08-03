@@ -20,7 +20,10 @@
     "activeTab",
     "scripting",
     "storage",
-    "downloads"
+    "downloads",
+    "contextMenus",
+    "notifications",
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"

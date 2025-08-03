@@ -147,7 +147,7 @@ class BackgroundServiceWorker {
         // Inject content script
         await chrome.scripting.executeScript({
           target: { tabId },
-          files: ['src/content/chatgpt-controller.js']
+          files: ['build/content_script.js']
         });
         
       }
