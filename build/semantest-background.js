@@ -1,537 +1,533 @@
-// Browser extension background script for Web-Buddy integration
-// Handles WebSocket communication with Web-Buddy server
-import { globalMessageStore } from './message-store.js';
-let DEFAULT_SERVER_URL = 'ws://localhost:3003/ws';
-let ws = null;
-let extensionId = '';
-let connectionStatus = {
-    connected: false,
-    connecting: false,
-    serverUrl: DEFAULT_SERVER_URL,
-    lastMessage: 'None',
-    lastError: '',
-    autoReconnect: false
-};
-// Store extension test data for E2E testing
-globalThis.extensionTestData = {
-    lastReceivedMessage: null,
-    lastResponse: null,
-    webSocketMessages: []
-};
-function connectWebSocket(serverUrl) {
-    if (connectionStatus.connecting || connectionStatus.connected) {
-        console.log('⚠️ Already connected or connecting');
-        return;
+// Background Service Worker for ChatGPT Chrome Extension
+// Handles extension lifecycle, tab management, and communication
+
+class BackgroundServiceWorker {
+  constructor() {
+    this.chatGPTTabs = new Map();
+    this.commandQueue = new Map();
+    this.extensionState = {
+      isActive: true,
+      activeTab: null,
+      lastCommand: null,
+      errors: []
+    };
+    
+    this.init();
+  }
+
+  init() {
+    
+    // Set up event listeners
+    this.setupInstallationHandlers();
+    this.setupTabHandlers();
+    this.setupMessageHandlers();
+    this.setupContextMenus();
+    this.setupCommandHandlers();
+    
+  }
+
+  setupInstallationHandlers() {
+    // Extension installation
+    chrome.runtime.onInstalled.addListener((details) => {
+      
+      if (details.reason === 'install') {
+        this.handleFirstInstall();
+      } else if (details.reason === 'update') {
+        this.handleUpdate(details.previousVersion);
+      }
+    });
+
+    // Extension startup
+    chrome.runtime.onStartup.addListener(() => {
+      this.refreshChatGPTTabs();
+    });
+  }
+
+  async handleFirstInstall() {
+    
+    // Set default settings
+    await chrome.storage.sync.set({
+      autoDetectChatGPT: true,
+      enableNotifications: true,
+      defaultCustomInstructions: '',
+      autoCreateProjects: false
+    });
+
+    // Open welcome page or ChatGPT
+    chrome.tabs.create({
+      url: 'https://chat.openai.com/',
+      active: true
+    });
+  }
+
+  async handleUpdate(previousVersion) {
+    
+    // Handle version-specific migrations
+    if (previousVersion && this.needsMigration(previousVersion)) {
+      await this.migrateuserData(previousVersion);
     }
-    const url = serverUrl || connectionStatus.serverUrl;
-    connectionStatus.connecting = true;
-    connectionStatus.serverUrl = url;
-    connectionStatus.lastError = '';
-    updateStatus();
-    console.log(`🔌 Attempting to connect to: ${url}`);
+  }
+
+  needsMigration(version) {
+    // Check if data migration is needed
+    return false; // Implement version checking logic
+  }
+
+  setupTabHandlers() {
+    // Tab updates (URL changes, page loads)
+    chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+      if (changeInfo.status === 'complete' && tab.url) {
+        await this.handleTabUpdate(tabId, tab);
+      }
+    });
+
+    // Tab activation
+    chrome.tabs.onActivated.addListener(async (activeInfo) => {
+      await this.handleTabActivation(activeInfo.tabId);
+    });
+
+    // Tab removal
+    chrome.tabs.onRemoved.addListener((tabId) => {
+      this.handleTabRemoval(tabId);
+    });
+  }
+
+  async handleTabUpdate(tabId, tab) {
+    if (this.isChatGPTUrl(tab.url)) {
+      
+      // Register ChatGPT tab
+      this.chatGPTTabs.set(tabId, {
+        id: tabId,
+        url: tab.url,
+        title: tab.title,
+        lastUpdated: Date.now(),
+        controllerReady: false
+      });
+
+      // Inject content script if needed
+      await this.ensureContentScriptInjected(tabId);
+      
+      // Update extension state
+      this.extensionState.activeTab = tabId;
+    }
+  }
+
+  async handleTabActivation(tabId) {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (tab && this.isChatGPTUrl(tab.url)) {
+      this.extensionState.activeTab = tabId;
+    }
+  }
+
+  handleTabRemoval(tabId) {
+    if (this.chatGPTTabs.has(tabId)) {
+      this.chatGPTTabs.delete(tabId);
+      
+      if (this.extensionState.activeTab === tabId) {
+        this.extensionState.activeTab = null;
+      }
+    }
+  }
+
+  isChatGPTUrl(url) {
+    return url && (
+      url.includes('chat.openai.com') ||
+      url.includes('chatgpt.com')
+    );
+  }
+
+  async ensureContentScriptInjected(tabId) {
     try {
-        ws = new WebSocket(url);
+      // Check if content script is already injected
+      const response = await chrome.tabs.sendMessage(tabId, {
+        action: 'GET_STATUS'
+      }).catch(() => null);
+
+      if (!response) {
+        // Inject content script
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['src/content/chatgpt-controller.js']
+        });
+        
+      }
+    } catch (error) {
     }
-    catch (error) {
-        console.error('❌ Failed to create WebSocket:', error);
-        connectionStatus.connecting = false;
-        connectionStatus.lastError = `Failed to create WebSocket: ${error}`;
-        updateStatus();
+  }
+
+  setupMessageHandlers() {
+    // Messages from content scripts
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      
+      // Handle async responses
+      (async () => {
+        try {
+          let response;
+          
+          switch (request.action) {
+            case 'CONTROLLER_READY':
+              response = await this.handleControllerReady(sender.tab.id);
+              break;
+              
+            case 'CONTROLLER_ERROR':
+              response = await this.handleControllerError(sender.tab.id, request.error);
+              break;
+              
+            case 'EXECUTE_COMMAND':
+              response = await this.executeCommand(request.command, request.data, sender.tab.id);
+              break;
+              
+            case 'GET_EXTENSION_STATE':
+              response = this.getExtensionState();
+              break;
+              
+            case 'SET_SETTINGS':
+              response = await this.updateSettings(request.settings);
+              break;
+              
+            case 'DOWNLOAD_IMAGE':
+              response = await this.downloadImage(request.data.url, request.data.filename);
+              break;
+              
+            default:
+              response = { success: false, error: 'Unknown action' };
+          }
+          
+          sendResponse(response);
+        } catch (error) {
+          sendResponse({ success: false, error: error.message });
+        }
+      })();
+      
+      return true; // Keep message channel open
+    });
+
+    // Messages from popup
+    chrome.runtime.onConnect.addListener((port) => {
+      if (port.name === 'popup') {
+        this.setupPopupConnection(port);
+      }
+    });
+  }
+
+  async handleControllerReady(tabId) {
+    
+    const tabInfo = this.chatGPTTabs.get(tabId);
+    if (tabInfo) {
+      tabInfo.controllerReady = true;
+      this.chatGPTTabs.set(tabId, tabInfo);
+    }
+    
+    return { success: true };
+  }
+
+  async handleControllerError(tabId, error) {
+    
+    this.extensionState.errors.push({
+      tabId,
+      error,
+      timestamp: Date.now()
+    });
+    
+    return { success: true };
+  }
+
+  setupPopupConnection(port) {
+    
+    port.onMessage.addListener(async (message) => {
+      try {
+        let response;
+        
+        switch (message.action) {
+          case 'GET_CHATGPT_TABS':
+            response = await this.getChatGPTTabs();
+            break;
+            
+          case 'EXECUTE_CHATGPT_COMMAND':
+            response = await this.executeChatGPTCommand(
+              message.command,
+              message.data,
+              message.tabId
+            );
+            break;
+            
+          case 'GET_SETTINGS':
+            response = await this.getSettings();
+            break;
+            
+          case 'UPDATE_SETTINGS':
+            response = await this.updateSettings(message.settings);
+            break;
+            
+          default:
+            response = { success: false, error: 'Unknown popup action' };
+        }
+        
+        port.postMessage(response);
+      } catch (error) {
+        port.postMessage({ success: false, error: error.message });
+      }
+    });
+
+    port.onDisconnect.addListener(() => {
+    });
+  }
+
+  setupContextMenus() {
+    // Create context menu items
+    chrome.contextMenus.create({
+      id: 'chatgpt-create-project',
+      title: 'Create ChatGPT Project',
+      contexts: ['page'],
+      documentUrlPatterns: ['*://chat.openai.com/*', '*://chatgpt.com/*']
+    });
+
+    chrome.contextMenus.create({
+      id: 'chatgpt-new-chat',
+      title: 'New Chat',
+      contexts: ['page'],
+      documentUrlPatterns: ['*://chat.openai.com/*', '*://chatgpt.com/*']
+    });
+
+    chrome.contextMenus.create({
+      id: 'chatgpt-send-prompt',
+      title: 'Send Custom Prompt',
+      contexts: ['selection'],
+      documentUrlPatterns: ['*://chat.openai.com/*', '*://chatgpt.com/*']
+    });
+
+    // Context menu click handler
+    chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+      await this.handleContextMenuClick(info, tab);
+    });
+  }
+
+  async handleContextMenuClick(info, tab) {
+    
+    switch (info.menuItemId) {
+      case 'chatgpt-create-project':
+        await this.promptForProjectCreation(tab.id);
+        break;
+        
+      case 'chatgpt-new-chat':
+        await this.executeChatGPTCommand('CREATE_NEW_CHAT', {}, tab.id);
+        break;
+        
+      case 'chatgpt-send-prompt':
+        if (info.selectionText) {
+          await this.executeChatGPTCommand('SEND_PROMPT', {
+            text: info.selectionText
+          }, tab.id);
+        }
+        break;
+    }
+  }
+
+  setupCommandHandlers() {
+    // Keyboard shortcuts
+    chrome.commands.onCommand.addListener(async (command) => {
+      
+      const activeTab = await this.getActiveChatGPTTab();
+      if (!activeTab) {
         return;
-    }
-    ws.onopen = () => {
-        console.log('✅ Connected to Web-Buddy server');
-        extensionId = chrome.runtime.id;
-        connectionStatus.connected = true;
-        connectionStatus.connecting = false;
-        connectionStatus.lastMessage = 'Connected successfully';
-        updateStatus();
-        // Register the extension with the server
-        const registrationMessage = {
-            type: 'extensionRegistered',
-            payload: {
-                extensionId: extensionId,
-                version: chrome.runtime.getManifest().version,
-                capabilities: ['domManipulation', 'webAutomation']
-            },
-            correlationId: `reg-${Date.now()}`,
-            timestamp: new Date().toISOString(),
-            eventId: `ext-reg-${Date.now()}`
-        };
-        ws?.send(JSON.stringify(registrationMessage));
-        // Send periodic heartbeat
-        startHeartbeat();
-    };
-    ws.onmessage = async (event) => {
-        try {
-            const message = JSON.parse(event.data);
-            console.log('📨 Received message from server:', message);
-            connectionStatus.lastMessage = `${message.type} (${new Date().toLocaleTimeString()})`;
-            updateStatus();
-            // Store for E2E testing
-            globalThis.extensionTestData.lastReceivedMessage = message;
-            globalThis.extensionTestData.webSocketMessages.push(message);
-            // Add inbound message to message store for time-travel debugging
-            const metadata = {
-                extensionId: chrome.runtime.id,
-                tabId: message.tabId,
-                windowId: undefined,
-                url: undefined,
-                userAgent: navigator.userAgent
-            };
-            globalMessageStore.addInboundMessage(message.type || 'UNKNOWN_MESSAGE_TYPE', message, message.correlationId || `inbound-${Date.now()}`, metadata);
-            // Handle different message types using double dispatch
-            await messageDispatcher.dispatch(message);
-        }
-        catch (error) {
-            console.error('❌ Error parsing WebSocket message:', error);
-            connectionStatus.lastError = `Message parsing error: ${error}`;
-            updateStatus();
-        }
-    };
-    ws.onclose = (event) => {
-        console.log(`🔌 Disconnected from server (code: ${event.code})`);
-        connectionStatus.connected = false;
-        connectionStatus.connecting = false;
-        connectionStatus.lastMessage = `Disconnected (${event.code})`;
-        updateStatus();
-        // Auto-reconnect if enabled and not a manual disconnect
-        if (connectionStatus.autoReconnect && event.code !== 1000) {
-            console.log('🔄 Auto-reconnecting in 5 seconds...');
-            setTimeout(() => connectWebSocket(), 5000);
-        }
-    };
-    ws.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
-        connectionStatus.connecting = false;
-        connectionStatus.lastError = 'Connection failed';
-        updateStatus();
-    };
-}
-function disconnectWebSocket() {
-    connectionStatus.autoReconnect = false;
-    if (ws) {
-        ws.close(1000, 'Manual disconnect'); // Normal closure
-        ws = null;
-    }
-    connectionStatus.connected = false;
-    connectionStatus.connecting = false;
-    connectionStatus.lastMessage = 'Manually disconnected';
-    updateStatus();
-    console.log('🔌 WebSocket disconnected manually');
-}
-let heartbeatInterval = null;
-function startHeartbeat() {
-    // Clear existing interval
-    if (heartbeatInterval) {
-        clearInterval(heartbeatInterval);
-    }
-    // Send heartbeat every 10 seconds
-    heartbeatInterval = setInterval(() => {
-        if (ws?.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-                type: 'heartbeat',
-                correlationId: `heartbeat-${Date.now()}`,
-                timestamp: new Date().toISOString()
-            }));
-        }
-    }, 10000);
-}
-function updateStatus() {
-    // Update connection status based on actual WebSocket state
-    const actuallyConnected = ws?.readyState === WebSocket.OPEN;
-    connectionStatus.connected = actuallyConnected;
-    console.log('🔄 Updating status:', {
-        connected: connectionStatus.connected,
-        connecting: connectionStatus.connecting,
-        wsState: ws?.readyState,
-        lastMessage: connectionStatus.lastMessage
+      }
+      
+      switch (command) {
+        case 'new-chat':
+          await this.executeChatGPTCommand('CREATE_NEW_CHAT', {}, activeTab.id);
+          break;
+          
+        case 'create-project':
+          await this.promptForProjectCreation(activeTab.id);
+          break;
+      }
     });
-    // Notify popup of status change
-    chrome.runtime.sendMessage({
-        type: 'statusUpdate',
-        status: {
-            ...connectionStatus,
-            extensionId: extensionId,
-            connected: actuallyConnected
-        }
-    }).catch((error) => {
-        // Popup might not be open, ignore error but log for debugging
-        console.log('📨 Could not send status to popup (popup may be closed):', error?.message);
+  }
+
+  // Command Execution Methods
+  async executeChatGPTCommand(command, data = {}, tabId = null) {
+    const targetTabId = tabId || this.extensionState.activeTab;
+    
+    if (!targetTabId) {
+      throw new Error('No ChatGPT tab available');
+    }
+
+    const tabInfo = this.chatGPTTabs.get(targetTabId);
+    if (!tabInfo || !tabInfo.controllerReady) {
+      throw new Error('ChatGPT controller not ready');
+    }
+
+
+    try {
+      const response = await chrome.tabs.sendMessage(targetTabId, {
+        action: command,
+        data
+      });
+
+      this.extensionState.lastCommand = {
+        command,
+        data,
+        tabId: targetTabId,
+        timestamp: Date.now(),
+        success: response.success
+      };
+
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async promptForProjectCreation(tabId) {
+    // This would typically show a prompt dialog
+    // For now, use a default name
+    const projectName = `Project ${Date.now()}`;
+    
+    return await this.executeChatGPTCommand('CREATE_PROJECT', {
+      name: projectName
+    }, tabId);
+  }
+
+  // State Management
+  async getChatGPTTabs() {
+    const tabs = Array.from(this.chatGPTTabs.values());
+    return { success: true, tabs };
+  }
+
+  async getActiveChatGPTTab() {
+    if (this.extensionState.activeTab) {
+      return this.chatGPTTabs.get(this.extensionState.activeTab);
+    }
+    
+    // Fallback: find any ChatGPT tab
+    const tabs = Array.from(this.chatGPTTabs.values());
+    return tabs.length > 0 ? tabs[0] : null;
+  }
+
+  getExtensionState() {
+    return {
+      success: true,
+      state: {
+        ...this.extensionState,
+        chatGPTTabsCount: this.chatGPTTabs.size,
+        activeChatGPTTab: this.chatGPTTabs.get(this.extensionState.activeTab)
+      }
+    };
+  }
+
+  async refreshChatGPTTabs() {
+    // Clear existing tabs
+    this.chatGPTTabs.clear();
+    
+    // Find all ChatGPT tabs
+    const tabs = await chrome.tabs.query({});
+    
+    for (const tab of tabs) {
+      if (this.isChatGPTUrl(tab.url)) {
+        await this.handleTabUpdate(tab.id, tab);
+      }
+    }
+    
+  }
+
+  // Settings Management
+  async getSettings() {
+    const settings = await chrome.storage.sync.get([
+      'autoDetectChatGPT',
+      'enableNotifications',
+      'defaultCustomInstructions',
+      'autoCreateProjects'
+    ]);
+    
+    return { success: true, settings };
+  }
+
+  async updateSettings(newSettings) {
+    await chrome.storage.sync.set(newSettings);
+    
+    return { success: true };
+  }
+
+  // Notification Methods
+  async showNotification(title, message, type = 'basic') {
+    const settings = await this.getSettings();
+    if (!settings.settings.enableNotifications) {
+      return;
+    }
+
+    chrome.notifications.create({
+      type,
+      iconUrl: 'assets/icon-48.png',
+      title,
+      message
     });
-}
-// Message Handler Classes using Double Dispatch Pattern
-class MessageHandler {
-    // Helper method to send response and track in message store
-    sendResponse(response, correlationId) {
-        try {
-            // Add outbound message to message store
-            const metadata = {
-                extensionId: chrome.runtime.id,
-                tabId: undefined,
-                windowId: undefined,
-                url: undefined,
-                userAgent: navigator.userAgent
-            };
-            globalMessageStore.addOutboundMessage(response.type || 'RESPONSE', response, correlationId, metadata);
-            // Send WebSocket response
-            ws?.send(JSON.stringify(response));
-            globalThis.extensionTestData.lastResponse = response;
-            // Mark the original message as successful
-            globalMessageStore.markMessageSuccess(correlationId, response);
-            console.log('📤 Response sent and tracked:', response);
-        }
-        catch (error) {
-            console.error('❌ Failed to send response:', error);
-            globalMessageStore.markMessageError(correlationId, error instanceof Error ? error.message : 'Unknown error');
-        }
-    }
-    // Helper method to send error response and track in message store
-    sendErrorResponse(correlationId, error, additionalData) {
-        const errorResponse = {
-            correlationId,
-            status: 'error',
-            error,
-            timestamp: new Date().toISOString(),
-            ...additionalData
+  }
+
+  // Image Download Method
+  async downloadImage(url, filename) {
+    try {
+      
+      // Use Chrome downloads API
+      const downloadId = await chrome.downloads.download({
+        url,
+        filename: `ChatGPT_Images/${filename}`,
+        saveAs: false,
+        conflictAction: 'uniquify'
+      });
+      
+      // Wait for download to complete
+      return new Promise((resolve) => {
+        const checkDownload = (delta) => {
+          if (delta.id === downloadId) {
+            if (delta.state && delta.state.current === 'complete') {
+              chrome.downloads.onChanged.removeListener(checkDownload);
+              resolve({ success: true, downloadId });
+            } else if (delta.state && delta.state.current === 'interrupted') {
+              chrome.downloads.onChanged.removeListener(checkDownload);
+              resolve({ success: false, error: 'Download interrupted' });
+            }
+          }
         };
-        try {
-            // Add outbound error to message store
-            const metadata = {
-                extensionId: chrome.runtime.id,
-                tabId: undefined,
-                windowId: undefined,
-                url: undefined,
-                userAgent: navigator.userAgent
-            };
-            globalMessageStore.addOutboundMessage('ERROR_RESPONSE', errorResponse, correlationId, metadata);
-            // Send WebSocket error response
-            ws?.send(JSON.stringify(errorResponse));
-            globalThis.extensionTestData.lastResponse = errorResponse;
-            // Mark the original message as failed
-            globalMessageStore.markMessageError(correlationId, error);
-            console.log('📤 Error response sent and tracked:', errorResponse);
-        }
-        catch (sendError) {
-            console.error('❌ Failed to send error response:', sendError);
-        }
+        
+        chrome.downloads.onChanged.addListener(checkDownload);
+        
+        // Timeout after 30 seconds
+        setTimeout(() => {
+          chrome.downloads.onChanged.removeListener(checkDownload);
+          resolve({ success: false, error: 'Download timeout' });
+        }, 30000);
+      });
+      
+    } catch (error) {
+      return { success: false, error: error.message };
     }
+  }
+
+  // Error Handling
+  handleError(error, context = '') {
+    
+    this.extensionState.errors.push({
+      error: error.message || error,
+      context,
+      timestamp: Date.now()
+    });
+
+    // Show notification for critical errors
+    if (context.includes('critical')) {
+      this.showNotification(
+        'ChatGPT Extension Error',
+        error.message || 'An unexpected error occurred'
+      );
+    }
+  }
 }
-class AutomationRequestedHandler extends MessageHandler {
-    async handle(message) {
-        try {
-            // Get active tab
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tab.id) {
-                throw new Error('No active tab found');
-            }
-            // Forward to content script
-            chrome.tabs.sendMessage(tab.id, message, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error('❌ Error sending to content script:', chrome.runtime.lastError.message);
-                    this.sendErrorResponse(message.correlationId, chrome.runtime.lastError.message || 'Content script not reachable');
-                }
-                else {
-                    console.log('✅ Received response from content script:', response);
-                    this.sendResponse(response, message.correlationId);
-                }
-            });
-        }
-        catch (error) {
-            console.error('❌ Error handling automation request:', error);
-            this.sendErrorResponse(message.correlationId, error instanceof Error ? error.message : 'Unknown error');
-        }
-    }
-}
-class TabSwitchRequestedHandler extends MessageHandler {
-    async handle(message) {
-        try {
-            const { payload, correlationId } = message;
-            const { title } = payload;
-            console.log(`🔄 Switching to tab with title: "${title}"`);
-            // Query all tabs to find the one with matching title
-            const tabs = await chrome.tabs.query({});
-            console.log(`🔍 Found ${tabs.length} total tabs`);
-            // Find tab with matching title (case-insensitive partial match)
-            const matchingTabs = tabs.filter(tab => tab.title && tab.title.toLowerCase().includes(title.toLowerCase()));
-            if (matchingTabs.length === 0) {
-                this.sendErrorResponse(correlationId, `No tab found with title containing: "${title}"`, { availableTabs: tabs.map(tab => ({ id: tab.id, title: tab.title, url: tab.url })) });
-                return;
-            }
-            // Use the first matching tab
-            const targetTab = matchingTabs[0];
-            console.log(`✅ Found matching tab: "${targetTab.title}" (ID: ${targetTab.id})`);
-            // Switch to the tab by updating it (making it active) and focusing its window
-            await chrome.tabs.update(targetTab.id, { active: true });
-            await chrome.windows.update(targetTab.windowId, { focused: true });
-            console.log(`🎯 Successfully switched to tab: "${targetTab.title}"`);
-            const successResponse = {
-                correlationId: correlationId,
-                status: 'success',
-                data: {
-                    action: 'TabSwitchRequested',
-                    switchedTo: {
-                        id: targetTab.id,
-                        title: targetTab.title,
-                        url: targetTab.url,
-                        windowId: targetTab.windowId
-                    },
-                    totalMatches: matchingTabs.length
-                },
-                timestamp: new Date().toISOString()
-            };
-            this.sendResponse(successResponse, correlationId);
-        }
-        catch (error) {
-            console.error('❌ Error handling tab switch request:', error);
-            this.sendErrorResponse(message.correlationId, error instanceof Error ? error.message : 'Unknown tab switch error');
-        }
-    }
-}
-class PingHandler extends MessageHandler {
-    handle(message) {
-        const pongResponse = {
-            type: 'pong',
-            correlationId: message.correlationId,
-            payload: {
-                originalMessage: message.payload || 'ping',
-                extensionId: extensionId,
-                timestamp: new Date().toISOString()
-            }
-        };
-        ws?.send(JSON.stringify(pongResponse));
-        globalThis.extensionTestData.lastResponse = pongResponse;
-    }
-}
-class RegistrationAckHandler extends MessageHandler {
-    handle(message) {
-        console.log('✅ Registration acknowledged by server');
-        connectionStatus.lastMessage = 'Registered with server';
-        updateStatus();
-    }
-}
-class HeartbeatAckHandler extends MessageHandler {
-    handle(message) {
-        console.log('💓 Heartbeat acknowledged by server');
-        connectionStatus.lastMessage = `Heartbeat (${new Date().toLocaleTimeString()})`;
-        updateStatus();
-    }
-}
-class ContractExecutionRequestedHandler extends MessageHandler {
-    async handle(message) {
-        try {
-            console.log('📋 Handling contract execution request:', message);
-            // Get active tab
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tab.id) {
-                throw new Error('No active tab found');
-            }
-            // Forward to content script with contract execution type
-            const contractMessage = {
-                ...message,
-                type: 'contractExecutionRequested'
-            };
-            chrome.tabs.sendMessage(tab.id, contractMessage, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error('❌ Error sending contract execution to content script:', chrome.runtime.lastError.message);
-                    this.sendErrorResponse(message.correlationId, chrome.runtime.lastError.message || 'Content script not reachable for contract execution');
-                }
-                else {
-                    console.log('✅ Received contract execution response from content script:', response);
-                    this.sendResponse(response, message.correlationId);
-                }
-            });
-        }
-        catch (error) {
-            console.error('❌ Error handling contract execution request:', error);
-            this.sendErrorResponse(message.correlationId, error instanceof Error ? error.message : 'Unknown contract execution error');
-        }
-    }
-}
-class ContractDiscoveryRequestedHandler extends MessageHandler {
-    async handle(message) {
-        try {
-            console.log('🔍 Handling contract discovery request:', message);
-            // Get active tab
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tab.id) {
-                throw new Error('No active tab found');
-            }
-            // Forward to content script with contract discovery type
-            const discoveryMessage = {
-                ...message,
-                type: 'contractDiscoveryRequested'
-            };
-            chrome.tabs.sendMessage(tab.id, discoveryMessage, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error('❌ Error sending contract discovery to content script:', chrome.runtime.lastError.message);
-                    this.sendErrorResponse(message.correlationId, chrome.runtime.lastError.message || 'Content script not reachable for contract discovery');
-                }
-                else {
-                    console.log('✅ Received contract discovery response from content script:', response);
-                    this.sendResponse(response, message.correlationId);
-                }
-            });
-        }
-        catch (error) {
-            console.error('❌ Error handling contract discovery request:', error);
-            this.sendErrorResponse(message.correlationId, error instanceof Error ? error.message : 'Unknown contract discovery error');
-        }
-    }
-}
-class ContractAvailabilityCheckHandler extends MessageHandler {
-    async handle(message) {
-        try {
-            console.log('🔍 Handling contract availability check:', message);
-            // Get active tab
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tab.id) {
-                throw new Error('No active tab found');
-            }
-            // Forward to content script with availability check type
-            const availabilityMessage = {
-                ...message,
-                type: 'contractAvailabilityCheck'
-            };
-            chrome.tabs.sendMessage(tab.id, availabilityMessage, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error('❌ Error sending contract availability check to content script:', chrome.runtime.lastError.message);
-                    this.sendErrorResponse(message.correlationId, chrome.runtime.lastError.message || 'Content script not reachable for availability check');
-                }
-                else {
-                    console.log('✅ Received contract availability response from content script:', response);
-                    this.sendResponse(response, message.correlationId);
-                }
-            });
-        }
-        catch (error) {
-            console.error('❌ Error handling contract availability check:', error);
-            this.sendErrorResponse(message.correlationId, error instanceof Error ? error.message : 'Unknown contract availability error');
-        }
-    }
-}
-class MessageDispatcher {
-    constructor() {
-        this.handlers = new Map();
-        this.registerHandlers();
-    }
-    registerHandlers() {
-        // Using camel case for consistency
-        this.handlers.set('AutomationRequested', new AutomationRequestedHandler());
-        this.handlers.set('TabSwitchRequested', new TabSwitchRequestedHandler());
-        this.handlers.set('Ping', new PingHandler());
-        this.handlers.set('RegistrationAck', new RegistrationAckHandler());
-        this.handlers.set('HeartbeatAck', new HeartbeatAckHandler());
-        // Contract-based handlers
-        this.handlers.set('ContractExecutionRequested', new ContractExecutionRequestedHandler());
-        this.handlers.set('ContractDiscoveryRequested', new ContractDiscoveryRequestedHandler());
-        this.handlers.set('ContractAvailabilityCheck', new ContractAvailabilityCheckHandler());
-        // Keep legacy names for backward compatibility
-        this.handlers.set('automationRequested', new AutomationRequestedHandler());
-        this.handlers.set('ping', new PingHandler());
-        this.handlers.set('registrationAck', new RegistrationAckHandler());
-        this.handlers.set('heartbeatAck', new HeartbeatAckHandler());
-        // Contract-based handlers (snake_case for API compatibility)
-        this.handlers.set('contractExecutionRequested', new ContractExecutionRequestedHandler());
-        this.handlers.set('contractDiscoveryRequested', new ContractDiscoveryRequestedHandler());
-        this.handlers.set('contractAvailabilityCheck', new ContractAvailabilityCheckHandler());
-    }
-    async dispatch(message) {
-        const handler = this.handlers.get(message.type);
-        if (handler) {
-            await handler.handle(message);
-        }
-        else {
-            console.log('⚠️ Unknown message type:', message.type);
-            console.log('📋 Available handlers:', Array.from(this.handlers.keys()));
-        }
-    }
-    // Method to register new handlers dynamically
-    registerHandler(messageType, handler) {
-        this.handlers.set(messageType, handler);
-        console.log(`📝 Registered new handler for: ${messageType}`);
-    }
-}
-// Initialize the message dispatcher
-const messageDispatcher = new MessageDispatcher();
-// Initialize extension (don't auto-connect)
-extensionId = chrome.runtime.id;
-// Listen for messages from popup and content scripts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('📨 Received message:', message);
-    // Handle popup commands
-    if (message.action === 'connect') {
-        connectWebSocket(message.serverUrl);
-        sendResponse({ success: true });
-        return true;
-    }
-    if (message.action === 'disconnect') {
-        disconnectWebSocket();
-        sendResponse({ success: true });
-        return true;
-    }
-    if (message.action === 'showTimeTravelUI') {
-        // Inject time travel UI into the active tab
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs[0]?.id) {
-                chrome.tabs.sendMessage(tabs[0].id, { action: 'showTimeTravelUI' });
-                sendResponse({ success: true });
-            }
-            else {
-                sendResponse({ success: false, error: 'No active tab found' });
-            }
-        });
-        return true;
-    }
-    if (message.action === 'getMessageStoreState') {
-        sendResponse({
-            success: true,
-            state: globalMessageStore.getState(),
-            statistics: globalMessageStore.getState().messages.length > 0 ?
-                (() => {
-                    const stats = { total: 0, success: 0, error: 0, pending: 0, inbound: 0, outbound: 0 };
-                    globalMessageStore.getState().messages.forEach(msg => {
-                        stats.total++;
-                        stats[msg.status]++;
-                        stats[msg.direction]++;
-                    });
-                    return stats;
-                })() : { total: 0, success: 0, error: 0, pending: 0, inbound: 0, outbound: 0 }
-        });
-        return true;
-    }
-    if (message.action === 'getStatus') {
-        console.log('📊 Status requested by popup, current internal status:', connectionStatus);
-        console.log('📊 WebSocket actual state:', ws ? `readyState=${ws.readyState}` : 'WebSocket is null');
-        const actuallyConnected = ws?.readyState === WebSocket.OPEN;
-        const currentStatus = {
-            ...connectionStatus,
-            extensionId: extensionId,
-            connected: actuallyConnected,
-            connecting: connectionStatus.connecting
-        };
-        console.log('📊 Sending status response to popup:', currentStatus);
-        sendResponse({
-            success: true,
-            status: currentStatus
-        });
-        return true;
-    }
-    // Forward responses to server if they have correlation IDs
-    if (message.correlationId && message.status) {
-        ws?.send(JSON.stringify(message));
-        globalThis.extensionTestData.lastResponse = message;
-    }
-    // Handle content script readiness notifications
-    if (message.type === 'CONTENT_SCRIPT_READY') {
-        console.log('✅ Content script ready in tab:', sender.tab?.id);
-    }
-    return true; // Keep message channel open for async responses
+
+// Initialize service worker
+const backgroundWorker = new BackgroundServiceWorker();
+
+// Keep service worker alive
+chrome.runtime.onMessage.addListener(() => {
+  // This listener keeps the service worker active
+  return true;
 });
-// Handle extension lifecycle
-chrome.runtime.onInstalled.addListener(() => {
-    console.log('🚀 Web-Buddy extension installed');
-});
-chrome.runtime.onStartup.addListener(() => {
-    console.log('🚀 Web-Buddy extension starting up');
-});
+
