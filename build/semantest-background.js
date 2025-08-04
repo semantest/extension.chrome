@@ -325,23 +325,25 @@ class BackgroundServiceWorker {
 
   setupCommandHandlers() {
     // Keyboard shortcuts
-    chrome.commands.onCommand.addListener(async (command) => {
-      
-      const activeTab = await this.getActiveChatGPTTab();
-      if (!activeTab) {
-        return;
-      }
-      
-      switch (command) {
-        case 'new-chat':
-          await this.executeChatGPTCommand('CREATE_NEW_CHAT', {}, activeTab.id);
-          break;
-          
-        case 'create-project':
-          await this.promptForProjectCreation(activeTab.id);
-          break;
-      }
-    });
+    if (chrome.commands && chrome.commands.onCommand) {
+      chrome.commands.onCommand.addListener(async (command) => {
+        
+        const activeTab = await this.getActiveChatGPTTab();
+        if (!activeTab) {
+          return;
+        }
+        
+        switch (command) {
+          case 'new-chat':
+            await this.executeChatGPTCommand('CREATE_NEW_CHAT', {}, activeTab.id);
+            break;
+            
+          case 'create-project':
+            await this.promptForProjectCreation(activeTab.id);
+            break;
+        }
+      });
+    }
   }
 
   // Command Execution Methods
