@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "SEMANTEST Browser Automation",
+  "version": "1.0.0",
+  "description": "Event-driven browser automation system",
+  
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "scripting",
+    "webNavigation",
+    "storage"
+  ],
+  
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://*.chatgpt.com/*",
+    "http://localhost:8080/*",
+    "http://localhost:8081/*",
+    "ws://localhost:8081/*"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "SEMANTEST Status"
+  },
+  
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
