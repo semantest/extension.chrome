@@ -2,7 +2,7 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/src', '<rootDir>/tests'],
-  testMatch: ['**/*.test.ts', '**/*.spec.ts'],
+  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
@@ -12,6 +12,9 @@ module.exports = {
     '^@contracts/(.*)$': '<rootDir>/src/contracts/$1'
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  transform: {
+    '^.+\\.tsx?$': 'ts-jest',
+  },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
@@ -31,8 +34,8 @@ module.exports = {
     'ts-jest': {
       tsconfig: {
         esModuleInterop: true,
-        allowSyntheticDefaultImports: true
-      }
-    }
-  }
+        allowSyntheticDefaultImports: true,
+      },
+    },
+  },
 };
