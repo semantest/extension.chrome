@@ -12,7 +12,7 @@ const MAX_RECONNECT_ATTEMPTS = 10;
 
 // Connect to SEMANTEST server
 function connectWebSocket() {
-  const wsUrl = 'ws://localhost:8081/ws';
+  const wsUrl = 'ws://localhost:8081';
   console.log(`🔌 Connecting to SEMANTEST server at ${wsUrl}...`);
   
   ws = new WebSocket(wsUrl);
@@ -141,9 +141,25 @@ function sendErrorEvent(message, correlationId) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('📨 Message from content script:', message);
   
-  // Forward to server via WebSocket
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(message));
+  // Handle image generated event specifically
+  if (message.type === 'ImageGeneratedEvent') {
+    console.log('🎉 IMAGE GENERATED! Sending to server...');
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      // Add output path from original request if we have it
+      const enhancedMessage = {
+        ...message,
+        payload: {
+          ...message.payload,
+          outputPath: message.payload.outputPath || '/tmp/semantest-image.png'
+        }
+      };
+      ws.send(JSON.stringify(enhancedMessage));
+    }
+  } else {
+    // Forward other messages as-is
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(message));
+    }
   }
   
   sendResponse({ received: true });
