@@ -1,173 +1,100 @@
 /**
- * SEMANTEST Content Script - CEO PRIORITY VERSION
- * Handles image generation requests from server
+ * SEMANTEST Content Script for ChatGPT
+ * Monitors state and handles automation
  */
 
-console.log('🚨 SEMANTEST CEO Priority - Content Script Loaded on', window.location.hostname);
+console.log('🚀 SEMANTEST Content Script Loaded on', window.location.hostname);
 
-// Idle state detector
-function detectChatGPTState() {
-  const state = {
-    domain: 'chatgpt.com',
-    url: window.location.href,
-    timestamp: Date.now()
-  };
-
-  // Find key elements
-  const textarea = document.querySelector('div[contenteditable="true"]');
-  const sendButton = document.querySelector('button[data-testid="send-button"]');
-  const spinner = document.querySelector('[class*="spinner"], [class*="loading"]');
-  const streaming = document.querySelector('[data-message-streaming="true"]');
-
-  // Determine idle state
-  state.isIdle = !!(
-    textarea && 
-    !textarea.hasAttribute('disabled') &&
-    sendButton && 
-    !sendButton.hasAttribute('disabled') &&
-    !spinner &&
-    !streaming
-  );
-
-  state.canSendMessage = state.isIdle;
-  return state;
-}
-
-// Send prompt to ChatGPT
-async function sendPromptToChatGPT(prompt, correlationId) {
-  console.log('🚀 CEO PRIORITY: Sending prompt to ChatGPT');
-  console.log('   Prompt:', prompt);
-  console.log('   Correlation:', correlationId);
-
-  // Wait for idle state
-  let attempts = 0;
-  while (!detectChatGPTState().isIdle && attempts < 30) {
-    console.log('⏳ Waiting for ChatGPT to be idle...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    attempts++;
+// Initialize idle detector
+class ChatGPTMonitor {
+  constructor() {
+    this.state = 'unknown';
+    this.observer = null;
+    this.init();
   }
 
-  if (!detectChatGPTState().isIdle) {
-    console.error('❌ ChatGPT not idle after 30 seconds');
-    return;
-  }
-
-  // Find the input field
-  const textarea = document.querySelector('div[contenteditable="true"]');
-  if (!textarea) {
-    console.error('❌ Could not find ChatGPT input field');
-    return;
-  }
-
-  // Type the prompt
-  textarea.focus();
-  textarea.textContent = prompt;
-  
-  // Trigger input event
-  const inputEvent = new Event('input', { bubbles: true });
-  textarea.dispatchEvent(inputEvent);
-
-  // Small delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  // Find and click send button
-  const sendButton = document.querySelector('button[data-testid="send-button"]');
-  if (sendButton && !sendButton.disabled) {
-    console.log('📤 Clicking send button...');
-    sendButton.click();
+  init() {
+    console.log('🔍 SEMANTEST: Initializing ChatGPT monitor');
     
-    // Monitor for response
-    monitorForImageResponse(correlationId);
-  } else {
-    console.error('❌ Send button not found or disabled');
-  }
-}
-
-// Monitor ChatGPT response for generated image
-async function monitorForImageResponse(correlationId) {
-  console.log('👀 Monitoring for image in response...');
-  
-  let attempts = 0;
-  const checkInterval = setInterval(() => {
-    // Look for image in the last message
-    const messages = document.querySelectorAll('[data-message-author-role="assistant"]');
-    const lastMessage = messages[messages.length - 1];
+    // Create visual indicator
+    const indicator = document.createElement('div');
+    indicator.id = 'semantest-status';
+    indicator.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 15px;
+      background: #10b981;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+      border-radius: 8px;
+      z-index: 99999;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    `;
+    indicator.textContent = '🎯 SEMANTEST Active';
+    document.body.appendChild(indicator);
     
-    if (lastMessage) {
-      // Check for image
-      const images = lastMessage.querySelectorAll('img');
-      if (images.length > 0) {
-        const imageUrl = images[0].src;
-        console.log('🎉 IMAGE FOUND!', imageUrl);
-        
-        // Send to background
-        chrome.runtime.sendMessage({
-          type: 'ImageGeneratedEvent',
-          payload: {
-            imageUrl,
-            correlationId,
-            timestamp: Date.now()
-          }
-        });
-        
-        clearInterval(checkInterval);
-        return;
+    // Setup observer
+    this.observer = new MutationObserver(() => this.checkState());
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true
+    });
+    
+    this.checkState();
+  }
+
+  checkState() {
+    const oldState = this.state;
+    
+    // Find elements
+    const input = document.querySelector('div[contenteditable="true"], textarea#prompt-textarea');
+    const sendButton = document.querySelector('button[data-testid="send-button"], button[aria-label*="Send"]');
+    const spinner = document.querySelector('.animate-spin, [class*="spinner"]');
+    
+    // Determine state
+    if (spinner) {
+      this.state = 'busy';
+    } else if (input && sendButton && !sendButton.disabled) {
+      this.state = 'idle';
+    } else {
+      this.state = 'busy';
+    }
+    
+    if (oldState !== this.state) {
+      console.log(`💡 SEMANTEST: State changed: ${oldState} → ${this.state}`);
+      
+      // Update indicator
+      const indicator = document.getElementById('semantest-status');
+      if (indicator) {
+        indicator.textContent = this.state === 'idle' ? '✅ IDLE' : '⏳ BUSY';
+        indicator.style.background = this.state === 'idle' ? '#10b981' : '#f59e0b';
       }
+      
+      // Notify background script
+      chrome.runtime.sendMessage({
+        type: 'CHATGPT_STATE_CHANGE',
+        state: this.state,
+        url: window.location.href
+      });
     }
-    
-    attempts++;
-    if (attempts > 60) { // 60 seconds timeout
-      console.error('❌ Timeout waiting for image');
-      clearInterval(checkInterval);
-    }
-  }, 1000);
+  }
 }
+
+// Initialize monitor
+const monitor = new ChatGPTMonitor();
 
 // Listen for messages from background script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('📨 CEO PRIORITY Message received:', message);
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('📨 SEMANTEST: Received message:', request);
   
-  if (message.type === 'SEND_PROMPT') {
-    const { prompt, correlationId } = message.payload;
-    sendPromptToChatGPT(prompt, correlationId);
-    sendResponse({ received: true });
-  }
-  
-  if (message.type === 'GET_STATE') {
-    sendResponse(detectChatGPTState());
+  if (request.type === 'GET_STATE') {
+    sendResponse({ state: monitor.state });
   }
   
   return true;
 });
 
-// Send state updates
-function sendStateToBackground() {
-  const state = detectChatGPTState();
-  
-  chrome.runtime.sendMessage({
-    type: 'ChatGPTStateEvent',
-    payload: state
-  }, (response) => {
-    if (response?.received) {
-      console.log('✅ State sent to background');
-    }
-  });
-}
-
-// Monitor state changes
-let lastState = null;
-setInterval(() => {
-  const currentState = detectChatGPTState();
-  
-  if (lastState === null || lastState.isIdle !== currentState.isIdle) {
-    console.log(`💡 State changed: ${currentState.isIdle ? 'IDLE ✅' : 'BUSY 🔄'}`);
-    sendStateToBackground();
-    lastState = currentState;
-  }
-}, 1000);
-
-// Initial connection
-setTimeout(() => {
-  sendStateToBackground();
-  console.log('🚨 CEO PRIORITY - SEMANTEST ready for image generation!');
-}, 2000);
+console.log('✅ SEMANTEST: Content script ready for automation!');

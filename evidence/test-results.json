@@ -1,0 +1,30 @@
+{
+  "extensionLoaded": true,
+  "chatgptOpened": true,
+  "detectorInjected": true,
+  "idleDetected": false,
+  "busyDetected": true,
+  "stateTransitions": [
+    {
+      "state": "busy",
+      "timestamp": "2025-09-06T07:36:00.884Z"
+    },
+    {
+      "state": "busy",
+      "timestamp": "2025-09-06T07:36:03.629Z"
+    },
+    {
+      "state": "busy",
+      "timestamp": "2025-09-06T07:36:23.819Z"
+    }
+  ],
+  "screenshots": [
+    "1-extensions-loaded.png",
+    "2-chatgpt-loaded.png",
+    "3-detector-injected.png",
+    "4-idle-state.png",
+    "5-typed-message.png",
+    "6-busy-state.png",
+    "7-final-state.png"
+  ]
+}
