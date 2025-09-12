@@ -67,29 +67,45 @@ class SemantestWebSocketHandler {
     console.log('🎯 SEMANTEST: Handling event type:', event.type);
     
     if (event.type === 'ImageGenerationRequestedEvent') {
-      const prompt = event.data?.prompt || event.prompt;
-      if (!prompt) {
-        console.error('❌ SEMANTEST: No prompt provided');
-        return;
-      }
+      // Forward the entire event to content script
+      console.log('📤 SEMANTEST: Forwarding event to content scripts');
       
-      // Find or create ChatGPT tab
-      const tabs = await chrome.tabs.query({ url: 'https://chatgpt.com/*' });
+      // Find ChatGPT tabs
+      const tabs = await chrome.tabs.query({ 
+        url: ['https://chatgpt.com/*', 'https://chat.openai.com/*'] 
+      });
       
       if (tabs.length > 0) {
-        await chrome.tabs.update(tabs[0].id, { active: true });
-        await this.typePromptInTab(tabs[0].id, prompt);
-      } else {
-        const newTab = await chrome.tabs.create({ url: 'https://chatgpt.com' });
-        
-        chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-          if (tabId === newTab.id && info.status === 'complete') {
-            chrome.tabs.onUpdated.removeListener(listener);
-            setTimeout(() => {
-              this.typePromptInTab(newTab.id, prompt);
-            }, 3000);
+        // Send to all ChatGPT tabs
+        for (const tab of tabs) {
+          try {
+            // First try to send message
+            await chrome.tabs.sendMessage(tab.id, event);
+            console.log('✅ SEMANTEST: Sent to tab', tab.id);
+          } catch (error) {
+            console.error('❌ SEMANTEST: Error sending to tab', tab.id, error);
+            
+            // If content script not loaded, inject it
+            console.log('🔧 SEMANTEST: Injecting content script into tab', tab.id);
+            try {
+              await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ['content-script.js']
+              });
+              
+              // Wait a bit for script to initialize
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              // Try sending again
+              await chrome.tabs.sendMessage(tab.id, event);
+              console.log('✅ SEMANTEST: Sent to tab after injection', tab.id);
+            } catch (injectError) {
+              console.error('❌ SEMANTEST: Failed to inject script', injectError);
+            }
           }
-        }.bind(this));
+        }
+      } else {
+        console.log('❌ SEMANTEST: No ChatGPT tabs found');
       }
     }
   }
@@ -173,6 +189,45 @@ class SemantestWebSocketHandler {
 // Initialize WebSocket
 const wsHandler = new SemantestWebSocketHandler();
 wsHandler.connect();
+
+// Handle messages from popup and content scripts
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('📨 SEMANTEST: Message received:', request.type);
+  
+  switch(request.type) {
+    case 'GET_WS_STATUS':
+      sendResponse({ connected: wsHandler.isConnected });
+      break;
+      
+    case 'CONNECT_WEBSOCKET':
+      wsHandler.connect();
+      sendResponse({ status: 'connecting' });
+      break;
+      
+    case 'SEND_PROMPT':
+      if (request.prompt) {
+        wsHandler.handleEvent({
+          type: 'ImageGenerationRequestedEvent',
+          prompt: request.prompt
+        });
+        sendResponse({ status: 'sent' });
+      }
+      break;
+      
+    case 'CHATGPT_STATE_CHANGE':
+      console.log('State change:', request.state);
+      if (wsHandler.isConnected) {
+        wsHandler.send({
+          type: 'STATE_CHANGE',
+          state: request.state,
+          tabId: sender.tab?.id
+        });
+      }
+      break;
+  }
+  
+  return true; // Keep channel open for async response
+});
 
 // Keep service worker alive
 setInterval(() => {

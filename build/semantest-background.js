@@ -1,15 +1,18 @@
-// Background Service Worker for ChatGPT Chrome Extension
-// Handles extension lifecycle, tab management, and communication
+// Enhanced Background Service Worker for ChatGPT Chrome Extension
+// Handles extension lifecycle, tab management, and ChatGPT image generation automation
 
 class BackgroundServiceWorker {
   constructor() {
     this.chatGPTTabs = new Map();
     this.commandQueue = new Map();
+    this.imageGenerationQueue = new Map();
     this.extensionState = {
       isActive: true,
       activeTab: null,
       lastCommand: null,
-      errors: []
+      errors: [],
+      imageGenerationActive: false,
+      totalImagesGenerated: 0
     };
     
     this.init();
@@ -187,6 +190,18 @@ class BackgroundServiceWorker {
               
             case 'DOWNLOAD_IMAGE':
               response = await this.downloadImage(request.data.url, request.data.filename);
+              break;
+
+            case 'GENERATE_CHATGPT_IMAGE':
+              response = await this.handleImageGenerationRequest(request);
+              break;
+
+            case 'CHATGPT_CONTENT_READY':
+              response = await this.handleChatGPTContentReady(sender.tab.id, request);
+              break;
+
+            case 'IMAGE_GENERATION_STATUS':
+              response = await this.handleImageGenerationStatus(request);
               break;
               
             default:
@@ -520,6 +535,169 @@ class BackgroundServiceWorker {
         'ChatGPT Extension Error',
         error.message || 'An unexpected error occurred'
       );
+    }
+  }
+
+  // Enhanced ChatGPT Image Generation Methods
+  async handleImageGenerationRequest(request) {
+    console.log('🎨 Handling image generation request:', request);
+    
+    const { prompt, correlationId, downloadImages = true } = request;
+    
+    try {
+      // Find active ChatGPT tab
+      const chatGPTTab = await this.getActiveChatGPTTab();
+      if (!chatGPTTab) {
+        throw new Error('No ChatGPT tab found');
+      }
+
+      // Mark generation as active
+      this.extensionState.imageGenerationActive = true;
+      
+      // Add to generation queue
+      this.imageGenerationQueue.set(correlationId, {
+        prompt,
+        tabId: chatGPTTab.id,
+        status: 'started',
+        startTime: Date.now(),
+        downloadImages
+      });
+
+      // Send generation request to content script
+      const response = await chrome.tabs.sendMessage(chatGPTTab.id, {
+        type: 'GENERATE_IMAGE',
+        payload: {
+          prompt,
+          downloadImages,
+          correlationId
+        }
+      });
+
+      // Update queue status
+      if (this.imageGenerationQueue.has(correlationId)) {
+        const queueItem = this.imageGenerationQueue.get(correlationId);
+        queueItem.status = response.success ? 'completed' : 'failed';
+        queueItem.endTime = Date.now();
+        queueItem.result = response;
+      }
+
+      if (response.success) {
+        this.extensionState.totalImagesGenerated += response.data?.imagesGenerated || 0;
+      }
+
+      this.extensionState.imageGenerationActive = false;
+
+      return response;
+    } catch (error) {
+      console.error('❌ Image generation failed:', error);
+      this.extensionState.imageGenerationActive = false;
+      
+      if (this.imageGenerationQueue.has(correlationId)) {
+        const queueItem = this.imageGenerationQueue.get(correlationId);
+        queueItem.status = 'error';
+        queueItem.error = error.message;
+        queueItem.endTime = Date.now();
+      }
+
+      return {
+        success: false,
+        error: error.message,
+        correlationId
+      };
+    }
+  }
+
+  async handleChatGPTContentReady(tabId, request) {
+    console.log('✅ ChatGPT enhanced content script ready:', tabId);
+    
+    const tabInfo = this.chatGPTTabs.get(tabId);
+    if (tabInfo) {
+      tabInfo.contentScriptReady = true;
+      tabInfo.capabilities = request.capabilities || [];
+      tabInfo.enhancedFeatures = true;
+      this.chatGPTTabs.set(tabId, tabInfo);
+    }
+
+    // Show notification that enhanced features are available
+    await this.showNotification(
+      'ChatGPT Automation Ready',
+      'Enhanced image generation automation is now active'
+    );
+
+    return { success: true };
+  }
+
+  async handleImageGenerationStatus(request) {
+    const { correlationId } = request;
+    
+    if (correlationId && this.imageGenerationQueue.has(correlationId)) {
+      const queueItem = this.imageGenerationQueue.get(correlationId);
+      return {
+        success: true,
+        status: queueItem
+      };
+    }
+
+    // Return general status
+    return {
+      success: true,
+      status: {
+        active: this.extensionState.imageGenerationActive,
+        totalGenerated: this.extensionState.totalImagesGenerated,
+        queueSize: this.imageGenerationQueue.size
+      }
+    };
+  }
+
+  // Enhanced tab update handler
+  async handleTabUpdate(tabId, tab) {
+    if (this.isChatGPTUrl(tab.url)) {
+      
+      // Register ChatGPT tab
+      this.chatGPTTabs.set(tabId, {
+        id: tabId,
+        url: tab.url,
+        title: tab.title,
+        lastUpdated: Date.now(),
+        controllerReady: false,
+        contentScriptReady: false,
+        capabilities: [],
+        enhancedFeatures: false
+      });
+
+      // Inject enhanced content script
+      await this.ensureEnhancedContentScriptInjected(tabId);
+      
+      // Update extension state
+      this.extensionState.activeTab = tabId;
+    }
+  }
+
+  async ensureEnhancedContentScriptInjected(tabId) {
+    try {
+      // First try to ping the enhanced content script
+      const response = await chrome.tabs.sendMessage(tabId, {
+        type: 'GET_CHATGPT_STATE'
+      }).catch(() => null);
+
+      if (!response) {
+        console.log('💉 Injecting enhanced ChatGPT content script...');
+        
+        // Inject the enhanced content script
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['build/chatgpt-content-script.js'] // Will need to be compiled
+        });
+        
+        console.log('✅ Enhanced content script injected');
+      } else {
+        console.log('✅ Enhanced content script already active');
+      }
+    } catch (error) {
+      console.error('❌ Failed to inject enhanced content script:', error);
+      
+      // Fall back to basic content script
+      await this.ensureContentScriptInjected(tabId);
     }
   }
 }
