@@ -3,24 +3,46 @@
   "name": "Semantest",
   "version": "2.0.0",
   "description": "AI-powered web automation extension built on Semantest framework for ChatGPT and language model integration",
+  
   "background": {
-    "service_worker": "build/semantest-background.js"
+    "service_worker": "background-polling.js"
   },
+  
   "content_scripts": [
     {
       "matches": [
-        "https://chat.openai.com/*",
         "https://chatgpt.com/*",
-        "https://*.google.com/*",
-        "https://google.com/*"
+        "https://chat.openai.com/*"
       ],
-      "js": ["build/storage.js", "build/content_script.js"]
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://claude.ai/*"
+      ],
+      "js": ["content-script-claude.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://gemini.google.com/*",
+        "https://aidemo.googlelabs.com/*",
+        "https://labs.google.com/*",
+        "https://makersuite.google.com/*",
+        "https://aistudio.google.com/*",
+        "https://imagen.google.com/*"
+      ],
+      "js": ["content-script-google.js"],
+      "run_at": "document_idle"
     }
   ],
+  
   "action": {
-    "default_popup": "src/popup.html",
+    "default_popup": "popup.html",
     "default_title": "Semantest: AI Automation"
   },
+  
   "permissions": [
     "tabs",
     "activeTab",
@@ -35,27 +57,21 @@
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://*.chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "https://*.claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://aidemo.googlelabs.com/*",
+    "https://labs.google.com/*",
+    "https://makersuite.google.com/*",
+    "https://aistudio.google.com/*",
+    "https://imagen.google.com/*",
+    "https://*.googlelabs.com/*",
+    "https://*.google.com/*",
     "http://localhost:8080/*",
     "http://localhost:8081/*",
     "ws://localhost:8081/*"
   ],
-  
-  "background": {
-    "service_worker": "background.js"
-  },
-  
-  "content_scripts": [
-    {
-      "matches": ["https://chatgpt.com/*"],
-      "js": ["content-script.js"],
-      "run_at": "document_idle"
-    }
-  ],
-  
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "SEMANTEST Status"
-  },
   
   "icons": {
     "16": "assets/icon16.png",
@@ -63,6 +79,7 @@
     "48": "assets/icon48.png",
     "128": "assets/icon128.png"
   },
+  
   "commands": {
     "new-chat": {
       "suggested_key": {
