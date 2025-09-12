@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SEMANTEST Extension WebSocket Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        .status {
+            padding: 10px;
+            border: 2px solid #0f0;
+            margin: 10px 0;
+            background: #000;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0a0;
+        }
+        #log {
+            background: #000;
+            border: 1px solid #0f0;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .connected { color: #0f0; }
+        .disconnected { color: #f00; }
+        .message { color: #ff0; }
+    </style>
+</head>
+<body>
+    <h1>🚨 SEMANTEST Extension WebSocket Connection Test</h1>
+    
+    <div class="status">
+        <h2>Connection Status</h2>
+        <div id="status">⏳ Initializing...</div>
+    </div>
+    
+    <div class="status">
+        <h2>Test Controls</h2>
+        <button onclick="connectWebSocket()">🔌 Connect to WebSocket</button>
+        <button onclick="sendTestMessage()">📤 Send Test Message</button>
+        <button onclick="sendImageRequest()">🖼️ Send Image Request</button>
+        <button onclick="checkExtension()">🔍 Check Extension</button>
+    </div>
+    
+    <div class="status">
+        <h2>Event Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+        
+        function addLog(message, className = '') {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function connectWebSocket() {
+            addLog('Connecting to WebSocket server on port 8081...', 'message');
+            
+            ws = new WebSocket('ws://localhost:8081');
+            
+            ws.onopen = () => {
+                status.innerHTML = '<span class="connected">✅ CONNECTED to WebSocket!</span>';
+                addLog('SUCCESS: Connected to WebSocket server!', 'connected');
+                
+                // Send connection established
+                ws.send(JSON.stringify({
+                    type: 'CONNECTION_ESTABLISHED',
+                    source: 'chrome-extension-test',
+                    timestamp: new Date().toISOString()
+                }));
+                addLog('Sent CONNECTION_ESTABLISHED event', 'message');
+            };
+            
+            ws.onmessage = (event) => {
+                addLog('RECEIVED: ' + event.data, 'message');
+            };
+            
+            ws.onerror = (error) => {
+                status.innerHTML = '<span class="disconnected">❌ WebSocket Error!</span>';
+                addLog('ERROR: ' + error, 'disconnected');
+            };
+            
+            ws.onclose = () => {
+                status.innerHTML = '<span class="disconnected">🔌 DISCONNECTED</span>';
+                addLog('WebSocket connection closed', 'disconnected');
+            };
+        }
+        
+        function sendTestMessage() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const message = {
+                    type: 'TEST_MESSAGE',
+                    payload: {
+                        message: 'Hello from extension test page!',
+                        timestamp: Date.now()
+                    }
+                };
+                ws.send(JSON.stringify(message));
+                addLog('SENT: ' + JSON.stringify(message), 'message');
+            } else {
+                addLog('ERROR: WebSocket not connected!', 'disconnected');
+            }
+        }
+        
+        function sendImageRequest() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const message = {
+                    type: 'ImageGenerationRequestedEvent',
+                    payload: {
+                        domain: 'chatgpt.com',
+                        prompt: 'Test image request from extension',
+                        correlationId: 'ext-test-' + Date.now()
+                    }
+                };
+                ws.send(JSON.stringify(message));
+                addLog('SENT: Image generation request', 'message');
+            } else {
+                addLog('ERROR: WebSocket not connected!', 'disconnected');
+            }
+        }
+        
+        function checkExtension() {
+            // Check if extension is loaded
+            if (chrome && chrome.runtime) {
+                chrome.runtime.sendMessage({ type: 'GET_WS_STATUS' }, (response) => {
+                    if (response) {
+                        addLog('Extension WebSocket status: ' + (response.connected ? 'CONNECTED' : 'DISCONNECTED'), 
+                               response.connected ? 'connected' : 'disconnected');
+                    } else {
+                        addLog('Extension not responding', 'disconnected');
+                    }
+                });
+            } else {
+                addLog('Chrome extension API not available', 'disconnected');
+            }
+        }
+        
+        // Auto-connect on load
+        window.onload = () => {
+            addLog('Page loaded, ready to test WebSocket connection', 'message');
+            // Try to connect automatically
+            setTimeout(connectWebSocket, 1000);
+        };
+    </script>
+</body>
+</html>
